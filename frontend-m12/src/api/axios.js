@@ -1,26 +1,23 @@
 import axios from 'axios';
 
-// ── Axios instance ────────────────────────────────────────────────────────────
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
 });
 
-// Tự động gắn JWT vào mọi request
-api.interceptors.request.use(config => {
+// Tự động gắn JWT token
+api.interceptors.request.use(cfg => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
+  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  return cfg;
 });
 
-// Tự về /login nếu token hết hạn
+// Tự động logout khi 401
 api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(err);
@@ -55,28 +52,30 @@ export const userAPI = {
 
 // ── Contest ───────────────────────────────────────────────────────────────────
 export const contestAPI = {
-  getAll:       params        => api.get('/contests', { params }),
-  getById:      id            => api.get(`/contests/${id}`),
-  create:       data          => api.post('/contests', data),
-  update:       (id, data)    => api.put(`/contests/${id}`, data),
-  delete:       id            => api.delete(`/contests/${id}`),
-  register:     id            => api.post(`/contests/${id}/register`),
-  publish:      id            => api.patch(`/contests/${id}/publish`),
-  participants: id            => api.get(`/contests/${id}/participants`),
-  results:      id            => api.get(`/contests/${id}/results`),
+  // Public
+  getAll:         params        => api.get('/contests', { params }),
+  getById:        id            => api.get(`/contests/${id}`),
+  getParticipants:id            => api.get(`/contests/${id}/participants`),
+  register:       id            => api.post(`/contests/${id}/register`),
+  // Teacher+
+  create:         data          => api.post('/contests', data),
+  update:         (id, data)    => api.put(`/contests/${id}`, data),
+  publish:        id            => api.patch(`/contests/${id}/publish`),
+  restore:        id            => api.patch(`/contests/${id}/restore`),
+  // Admin
+  adminGetAll:    params        => api.get('/contests/admin', { params }),
+  delete:         id            => api.delete(`/contests/${id}`),
 };
 
 // ── Document ──────────────────────────────────────────────────────────────────
 export const documentAPI = {
   getAll:    params    => api.get('/documents', { params }),
   getById:   id        => api.get(`/documents/${id}`),
-  download:  id        => `/api/documents/${id}/download`, // URL trực tiếp
-  myDocs:    ()        => api.get('/documents/my'),
+  upload:    formData  => api.post('/documents', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update:    (id, params) => api.put(`/documents/${id}`, null, { params }),
   delete:    id        => api.delete(`/documents/${id}`),
-  upload: (formData)   => api.post('/documents', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  update: (id, params) => api.put(`/documents/${id}`, null, { params }),
+  download:  id        => api.get(`/documents/${id}/download`, { responseType: 'blob' }),
+  myDocs:    ()        => api.get('/documents/my'),
 };
 
 // ── Roadmap ───────────────────────────────────────────────────────────────────
@@ -86,9 +85,17 @@ export const roadmapAPI = {
   create:   data         => api.post('/roadmaps', data),
   update:   (id, data)   => api.put(`/roadmaps/${id}`, data),
   delete:   id           => api.delete(`/roadmaps/${id}`),
-  addChapter:    (id, data) => api.post(`/roadmaps/${id}/chapters`, data),
-  updateChapter: (id, data) => api.put(`/roadmaps/chapters/${id}`, data),
-  deleteChapter: id         => api.delete(`/roadmaps/chapters/${id}`),
+  // Chapters
+  addChapter:    (roadmapId, data) => api.post(`/roadmaps/${roadmapId}/chapters`, data),
+  updateChapter: (chapterId, data) => api.put(`/roadmaps/chapters/${chapterId}`, data),
+  deleteChapter: id                => api.delete(`/roadmaps/chapters/${id}`),
+  // Files
   addFile:    (chapterId, data) => api.post(`/roadmaps/chapters/${chapterId}/files`, data),
-  removeFile: id               => api.delete(`/roadmaps/files/${id}`),
+  removeFile: id                => api.delete(`/roadmaps/files/${id}`),
+};
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export const adminAPI = {
+  dashboard: ()       => api.get('/admin/dashboard'),
+  logs:      params   => api.get('/admin/logs', { params }),
 };

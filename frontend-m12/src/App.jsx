@@ -21,6 +21,8 @@ import LessonPage    from './pages/roadmap/LessonPage';
 // ── Admin ────────────────────────────────────────────────────────────────────
 import AdminOverviewPage from './pages/admin/AdminOverviewPage';
 import AdminUsersPage    from './pages/admin/AdminUsersPage';
+import AdminExamsPage    from './pages/admin/AdminExamsPage';
+import AdminLogsPage     from './pages/admin/AdminLogsPage';
 
 // ── Route guards ────────────────────────────────────────────────────────────
 function PrivateRoute({ children }) {
@@ -84,6 +86,8 @@ function AppRoutes() {
       {/* Admin */}
       <Route path="/admin"        element={<AdminRoute><AdminOverviewPage /></AdminRoute>} />
       <Route path="/admin/users"  element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+      <Route path="/admin/exams"  element={<AdminRoute><AdminExamsPage /></AdminRoute>} />
+      <Route path="/admin/logs"   element={<AdminRoute><AdminLogsPage /></AdminRoute>} />
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

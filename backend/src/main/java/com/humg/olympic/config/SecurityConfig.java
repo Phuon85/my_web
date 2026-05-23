@@ -47,6 +47,8 @@ public class SecurityConfig {
         // Swagger
         "/swagger-ui/**",
         "/v3/api-docs/**",
+            "/favicon.ico",
+            "/error",
     };
 
     @Bean

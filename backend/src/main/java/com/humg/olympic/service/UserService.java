@@ -122,6 +122,14 @@ public class UserService {
         return toInfo(userRepository.save(user));
     }
 
+    // ── Admin: Reset mật khẩu về 123456 ─────────────────────────────────────
+    @Transactional
+    public void resetPassword(Long id) {
+        UserHumg user = findOrThrow(id);
+        user.setPassword(passwordEncoder.encode("123456"));
+        userRepository.save(user);
+    }
+
     // ── Admin: Khóa / Mở khóa tài khoản ────────────────────────────────────
     @Transactional
     public boolean toggleActive(Long id) {
@@ -131,7 +139,7 @@ public class UserService {
         return user.getIsActive();
     }
 
-    // ── Admin: Đổi vai trò (backward-compat endpoint cũ) ────────────────────
+    // ── Admin: Đổi vai trò ───────────────────────────────────────────────────
     @Transactional
     public void changeRole(Long id, String role) {
         List<String> valid = List.of("STUDENT", "TEACHER", "MANAGER", "ADMIN");

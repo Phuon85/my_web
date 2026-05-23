@@ -18,11 +18,16 @@ public interface ContestRepository extends JpaRepository<Contest, Long> {
                                 @Param("status")  String status);
 
     // Admin: tìm tất cả kể cả DRAFT
-    @Query("SELECT c FROM Contest c LEFT JOIN FETCH c.creator " +
-            "WHERE (:search IS NULL OR LOWER(c.title) LIKE LOWER(CONCAT('%',:search,'%'))) " +
+    @Query(value = "SELECT c.id, c.creator_id, c.title, c.description, c.subject, c.status, " +
+            "c.start_time, c.end_time, c.duration_minutes, " +
+            "c.prize_first, c.prize_second, c.prize_third, " +
+            "c.is_published, c.created_at, c.updated_at " +
+            "FROM contest c " +
+            "WHERE (:search IS NULL OR c.title ILIKE '%' || :search || '%') " +
             "AND (:status IS NULL OR c.status = :status) " +
-            "AND (:published IS NULL OR c.isPublished = :published) " +
-            "ORDER BY c.createdAt DESC")
+            "AND (CAST(:published AS boolean) IS NULL OR c.is_published = CAST(:published AS boolean)) " +
+            "ORDER BY c.created_at DESC",
+            nativeQuery = true)
     List<Contest> findAllAdmin(@Param("search")    String search,
                                @Param("status")    String status,
                                @Param("published") Boolean published);

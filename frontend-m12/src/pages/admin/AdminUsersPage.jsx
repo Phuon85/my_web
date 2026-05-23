@@ -204,7 +204,7 @@ function UserFormModal({ open, onClose, editUser, onSaved }) {
 }
 
 // ── Action Dropdown ──────────────────────────────────────────────────────────
-function ActionMenu({ user, onEdit, onToggle, onDelete }) {
+function ActionMenu({ user, onEdit, onToggle, onDelete, onResetPassword }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
@@ -223,10 +223,15 @@ function ActionMenu({ user, onEdit, onToggle, onDelete }) {
             position: 'absolute', right: 0, top: '100%',
             background: '#fff', borderRadius: 10,
             boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-            minWidth: 180, zIndex: 1000, overflow: 'hidden',
+            minWidth: 200, zIndex: 1000, overflow: 'hidden',
           }}>
             {[
               { icon: '✏️', label: 'Chỉnh sửa', action: () => { onEdit(); setOpen(false); } },
+              {
+                icon: '🔑', label: 'Reset mật khẩu (123456)',
+                action: () => { onResetPassword(); setOpen(false); },
+                color: '#d97706',
+              },
               {
                 icon: user.isActive === false ? '🔓' : '🔒',
                 label: user.isActive === false ? 'Mở khóa tài khoản' : 'Khóa tài khoản',
@@ -269,7 +274,7 @@ export default function AdminUsersPage() {
   const [toast, setToast]         = useState({ msg: '', type: 'success' });
   const [search, setSearch]       = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active'); // active | all | locked
+  const [statusFilter, setStatusFilter] = useState('active');
   const [page, setPage]           = useState(1);
   const [editUser, setEditUser]   = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -320,22 +325,28 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Filter & paginate (backend đã lọc theo isActive, chỉ cần paginate)
+  const handleResetPassword = async (user) => {
+    if (!window.confirm(`Reset mật khẩu của "${user.fullName}" về 123456?`)) return;
+    try {
+      await userAPI.resetPassword(user.id);
+      notify(`Đã reset mật khẩu của ${user.fullName} về 123456.`);
+    } catch {
+      notify('Có lỗi khi reset mật khẩu.', 'error');
+    }
+  };
+
   const totalPages = Math.ceil(users.length / PAGE_SIZE);
   const paged = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Stats từ state riêng (gọi API /users/stats)
   const [stats, setStats] = useState({ total: 0, active: 0, locked: 0, admin: 0, teacher: 0, student: 0 });
   useEffect(() => {
     userAPI.stats().then(r => setStats(r.data)).catch(() => {});
-  }, [users]); // reload stats khi users thay đổi
+  }, [users]);
 
   return (
     <AdminLayout>
-      {/* Page title */}
       <p style={{ color: '#888', fontSize: 13, margin: '0 0 18px' }}>Quản lý người dùng</p>
 
-      {/* Toast */}
       {toast.msg && (
         <div style={{
           position: 'fixed', top: 20, right: 24, zIndex: 3000,
@@ -350,9 +361,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Main card */}
       <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: '24px 28px' }}>
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 44, height: 44, background: '#e0f2f1', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
@@ -377,7 +386,7 @@ export default function AdminUsersPage() {
           </button>
         </div>
 
-        {/* Stats row */}
+        {/* Stats */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           {[
             { label: 'Tổng số',    value: stats.total,   color: '#3b82f6' },
@@ -390,7 +399,7 @@ export default function AdminUsersPage() {
             <div key={s.label} style={{
               background: '#f9fafb', borderRadius: 10, padding: '10px 16px',
               textAlign: 'center', minWidth: 80, flex: '1 1 80px',
-              border: `1.5px solid #f0f0f0`,
+              border: '1.5px solid #f0f0f0',
             }}>
               <p style={{ fontSize: 20, fontWeight: 800, color: s.color, margin: 0 }}>{s.value}</p>
               <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{s.label}</p>
@@ -400,7 +409,6 @@ export default function AdminUsersPage() {
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-          {/* Search */}
           <div style={{ position: 'relative', flex: '1', minWidth: 200 }}>
             <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#aaa', fontSize: 15 }}>🔍</span>
             <input
@@ -418,22 +426,12 @@ export default function AdminUsersPage() {
               onBlur={e => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
-
-          {/* Role filter */}
-          <select
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-            style={{ padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fafafa', cursor: 'pointer', outline: 'none', minWidth: 130 }}
-          >
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+            style={{ padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fafafa', cursor: 'pointer', outline: 'none', minWidth: 130 }}>
             {ROLES.map(r => <option key={r.value} value={r.value}>Vai trò: {r.label}</option>)}
           </select>
-
-          {/* Status filter */}
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            style={{ padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fafafa', cursor: 'pointer', outline: 'none', minWidth: 160 }}
-          >
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            style={{ padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fafafa', cursor: 'pointer', outline: 'none', minWidth: 160 }}>
             <option value="active">Trạng thái: Đang hoạt động</option>
             <option value="locked">Trạng thái: Đã khóa</option>
             <option value="all">Trạng thái: Tất cả</option>
@@ -453,7 +451,7 @@ export default function AdminUsersPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #f0f0f0' }}>
-                  {['ID', 'Thông tin thành viên', 'Vai trò', 'Khoa/Viện', 'Lần đăng nhập cuối', 'Hành động'].map(h => (
+                  {['ID', 'Thông tin thành viên', 'Vai trò', 'Khoa/Viện', 'Ngày tạo', 'Hành động'].map(h => (
                     <th key={h} style={{
                       padding: '10px 12px', textAlign: 'left',
                       fontSize: 12, fontWeight: 700, color: '#888',
@@ -464,24 +462,19 @@ export default function AdminUsersPage() {
               </thead>
               <tbody>
                 {paged.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #f7f7f7', transition: 'background 0.12s' }}
+                  <tr key={u.id} style={{ borderBottom: '1px solid #f7f7f7' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    {/* ID */}
                     <td style={{ padding: '12px 12px', fontSize: 13, color: '#888', fontWeight: 600 }}>
                       #{String(u.id).padStart(3, '0')}
                     </td>
-
-                    {/* Member info */}
                     <td style={{ padding: '12px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar user={u} />
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: '#1a202c', margin: 0 }}>
-                              {u.fullName}
-                            </p>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: '#1a202c', margin: 0 }}>{u.fullName}</p>
                             <StatusBadge active={u.isActive} />
                           </div>
                           <p style={{ fontSize: 12, color: '#888', margin: '2px 0 0' }}>
@@ -490,23 +483,9 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
                     </td>
-
-                    {/* Role */}
-                    <td style={{ padding: '12px 12px' }}>
-                      <RoleBadge role={u.role} />
-                    </td>
-
-                    {/* Khoa */}
-                    <td style={{ padding: '12px 12px', fontSize: 13, color: '#555', maxWidth: 160 }}>
-                      {u.khoa || u.truong || '—'}
-                    </td>
-
-                    {/* Last login */}
-                    <td style={{ padding: '12px 12px', fontSize: 13, color: '#888', whiteSpace: 'nowrap' }}>
-                      {timeAgo(u.createdAt)}
-                    </td>
-
-                    {/* Actions */}
+                    <td style={{ padding: '12px 12px' }}><RoleBadge role={u.role} /></td>
+                    <td style={{ padding: '12px 12px', fontSize: 13, color: '#555', maxWidth: 160 }}>{u.khoa || u.truong || '—'}</td>
+                    <td style={{ padding: '12px 12px', fontSize: 13, color: '#888', whiteSpace: 'nowrap' }}>{timeAgo(u.createdAt)}</td>
                     <td style={{ padding: '12px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {u.isActive !== false && u.role !== 'ADMIN' && (
@@ -515,8 +494,7 @@ export default function AdminUsersPage() {
                             style={{
                               background: '#3b82f6', color: '#fff',
                               border: 'none', borderRadius: 6, padding: '5px 12px',
-                              fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                              fontFamily: 'inherit',
+                              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                             }}
                           >
                             Sửa
@@ -527,6 +505,7 @@ export default function AdminUsersPage() {
                           onEdit={() => { setEditUser(u); setShowModal(true); }}
                           onToggle={() => handleToggle(u)}
                           onDelete={() => handleDelete(u)}
+                          onResetPassword={() => handleResetPassword(u)}
                         />
                       </div>
                     </td>
@@ -537,7 +516,7 @@ export default function AdminUsersPage() {
           </div>
         )}
 
-        {/* Footer + Pagination */}
+        {/* Pagination */}
         {!loading && users.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, flexWrap: 'wrap', gap: 10 }}>
             <p style={{ fontSize: 13, color: '#888', margin: 0 }}>
@@ -557,7 +536,6 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
       <UserFormModal
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -583,7 +561,6 @@ function PageBtn({ label, onClick, disabled, active }) {
         color: active ? '#fff' : disabled ? '#ccc' : '#555',
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontFamily: 'inherit', minWidth: 36,
-        transition: 'all 0.12s',
       }}
     >
       {label}

@@ -69,10 +69,15 @@ public class AuthService {
     }
 
     public UserInfoResponse getCurrentUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        UserHumg user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-        return toInfo(user);
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()
+            || "anonymousUser".equals(authentication.getPrincipal())) {
+        throw new RuntimeException("Chưa đăng nhập");
+    }
+    String credential = authentication.getName();
+    UserHumg user = userRepository.findByEmailOrMssv(credential)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+    return toInfo(user);
     }
 
     public static UserInfoResponse toInfo(UserHumg u) {

@@ -48,6 +48,7 @@ export const userAPI = {
   toggleActive: id            => api.patch(`/users/${id}/toggle-active`),
   changeRole:   (id, role)    => api.patch(`/users/${id}/role`, null, { params: { role } }),
   delete:       id            => api.delete(`/users/${id}`),
+  resetPassword: id => api.patch(`/users/${id}/reset-password`),
 };
 
 // ── Contest ───────────────────────────────────────────────────────────────────

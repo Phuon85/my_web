@@ -14,17 +14,20 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     List<Document> findBySubjectAndIsPublicTrueOrderByCreatedAtDesc(String subject);
 
-    @Query("SELECT d FROM Document d WHERE d.isPublic = true AND (" +
-           "LOWER(d.title) LIKE LOWER(CONCAT('%',:q,'%')) OR " +
-           "LOWER(d.description) LIKE LOWER(CONCAT('%',:q,'%')) OR " +
-           "LOWER(d.uploader.fullName) LIKE LOWER(CONCAT('%',:q,'%')))")
+    @Query(value = "SELECT d.* FROM document d JOIN user_humg u ON d.uploader_id = u.id " +
+            "WHERE d.is_public = true AND (" +
+            "d.title ILIKE '%' || :q || '%' OR " +
+            "d.description ILIKE '%' || :q || '%' OR " +
+            "u.full_name ILIKE '%' || :q || '%')",
+            nativeQuery = true)
     List<Document> search(@Param("q") String query);
 
     List<Document> findByUploaderIdOrderByCreatedAtDesc(Long uploaderId);
 
-    @Query("SELECT d FROM Document d WHERE d.isPublic = true " +
-           "AND (:subject IS NULL OR d.subject = :subject) " +
-           "AND (:q IS NULL OR LOWER(d.title) LIKE LOWER(CONCAT('%',:q,'%')))")
+    @Query(value = "SELECT * FROM document d WHERE d.is_public = true " +
+            "AND (:subject IS NULL OR d.subject = :subject) " +
+            "AND (:q IS NULL OR d.title ILIKE '%' || :q || '%')",
+            nativeQuery = true)
     List<Document> findFiltered(@Param("subject") String subject, @Param("q") String q);
 
     @Modifying @Transactional

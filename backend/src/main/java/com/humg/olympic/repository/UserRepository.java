@@ -24,17 +24,17 @@ public interface UserRepository extends JpaRepository<UserHumg, Long> {
     Optional<UserHumg> findByEmailOrMssv(@Param("c") String credential);
 
     // Tìm kiếm và lọc có thêm isActive
-    @Query("SELECT u FROM UserHumg u WHERE " +
-           "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%',:search,'%')) " +
-           "OR LOWER(u.email) LIKE LOWER(CONCAT('%',:search,'%')) " +
-           "OR LOWER(u.mssv) LIKE LOWER(CONCAT('%',:search,'%'))) " +
-           "AND (:role IS NULL OR u.role = :role) " +
-           "AND (:isActive IS NULL OR u.isActive = :isActive) " +
-           "ORDER BY u.createdAt DESC")
+    @Query(value = "SELECT * FROM user_humg u WHERE " +
+            "(:search IS NULL OR u.full_name ILIKE CONCAT('%', :search, '%') " +
+            "OR u.email ILIKE CONCAT('%', :search, '%') " +
+            "OR u.mssv ILIKE CONCAT('%', :search, '%')) " +
+            "AND (:role IS NULL OR u.role = :role) " +
+            "AND (CAST(:isActive AS boolean) IS NULL OR u.is_active = CAST(:isActive AS boolean)) " +
+            "ORDER BY u.created_at DESC",
+            nativeQuery = true)
     List<UserHumg> searchUsers(@Param("search") String search,
-                                @Param("role") String role,
-                                @Param("isActive") Boolean isActive);
-
+                               @Param("role") String role,
+                               @Param("isActive") Boolean isActive);
     // Bảng xếp hạng
     @Query("SELECT u FROM UserHumg u WHERE u.role = 'STUDENT' ORDER BY u.totalScore DESC")
     List<UserHumg> findLeaderboard(Pageable pageable);

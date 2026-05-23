@@ -18,28 +18,18 @@ public class UserController {
 
     private final UserService userService;
 
-    // ── Public / User endpoints ──────────────────────────────────────────────
-
-    /** Bảng xếp hạng — public */
     @GetMapping("/leaderboard")
     public ResponseEntity<List<UserInfoResponse>> leaderboard(
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(userService.getLeaderboard(limit));
     }
 
-    /** Cập nhật thông tin bản thân */
     @PutMapping("/me")
     public ResponseEntity<UserInfoResponse> updateMe(
             @Valid @RequestBody UpdateProfileRequest req) {
         return ResponseEntity.ok(userService.updateMe(req));
     }
 
-    // ── Admin endpoints ──────────────────────────────────────────────────────
-
-    /**
-     * Lấy danh sách người dùng (có tìm kiếm + lọc)
-     * GET /api/users?search=...&role=STUDENT&isActive=true
-     */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<List<UserInfoResponse>> getAll(
@@ -49,42 +39,25 @@ public class UserController {
         return ResponseEntity.ok(userService.getAll(search, role, isActive));
     }
 
-    /**
-     * Thống kê người dùng
-     * GET /api/users/stats
-     */
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<UserStatsResponse> getStats() {
         return ResponseEntity.ok(userService.getStats());
     }
 
-    /**
-     * Xem chi tiết 1 người dùng
-     * GET /api/users/{id}
-     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<UserInfoResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getById(id));
     }
 
-    /**
-     * Admin tạo người dùng mới
-     * POST /api/users
-     */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserInfoResponse> createUser(
             @Valid @RequestBody AdminCreateUserRequest req) {
-        UserInfoResponse created = userService.createUser(req);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(req));
     }
 
-    /**
-     * Admin cập nhật thông tin người dùng
-     * PUT /api/users/{id}
-     */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserInfoResponse> updateUser(
@@ -93,10 +66,14 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, req));
     }
 
-    /**
-     * Khóa / Mở khóa tài khoản
-     * PATCH /api/users/{id}/toggle-active
-     */
+    /** Reset mật khẩu về 123456 */
+    @PatchMapping("/{id}/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MessageResponse> resetPassword(@PathVariable Long id) {
+        userService.resetPassword(id);
+        return ResponseEntity.ok(new MessageResponse("Đã reset mật khẩu về 123456"));
+    }
+
     @PatchMapping("/{id}/toggle-active")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<MessageResponse> toggleActive(@PathVariable Long id) {
@@ -105,10 +82,6 @@ public class UserController {
                 nowActive ? "Đã mở tài khoản!" : "Đã khóa tài khoản!"));
     }
 
-    /**
-     * Đổi vai trò người dùng
-     * PATCH /api/users/{id}/role?role=TEACHER
-     */
     @PatchMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MessageResponse> changeRole(
@@ -118,10 +91,6 @@ public class UserController {
         return ResponseEntity.ok(new MessageResponse("Đã cập nhật vai trò: " + role));
     }
 
-    /**
-     * Xóa người dùng
-     * DELETE /api/users/{id}
-     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MessageResponse> deleteUser(@PathVariable Long id) {

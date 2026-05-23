@@ -23,17 +23,24 @@ public interface UserRepository extends JpaRepository<UserHumg, Long> {
     @Query("SELECT u FROM UserHumg u WHERE u.email = :c OR u.mssv = :c")
     Optional<UserHumg> findByEmailOrMssv(@Param("c") String credential);
 
-    // Tìm kiếm và lọc
+    // Tìm kiếm và lọc có thêm isActive
     @Query("SELECT u FROM UserHumg u WHERE " +
            "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%',:search,'%')) " +
-           "OR LOWER(u.email) LIKE LOWER(CONCAT('%',:search,'%'))) " +
-           "AND (:role IS NULL OR u.role = :role)")
+           "OR LOWER(u.email) LIKE LOWER(CONCAT('%',:search,'%')) " +
+           "OR LOWER(u.mssv) LIKE LOWER(CONCAT('%',:search,'%'))) " +
+           "AND (:role IS NULL OR u.role = :role) " +
+           "AND (:isActive IS NULL OR u.isActive = :isActive) " +
+           "ORDER BY u.createdAt DESC")
     List<UserHumg> searchUsers(@Param("search") String search,
-                                @Param("role") String role);
+                                @Param("role") String role,
+                                @Param("isActive") Boolean isActive);
 
     // Bảng xếp hạng
     @Query("SELECT u FROM UserHumg u WHERE u.role = 'STUDENT' ORDER BY u.totalScore DESC")
     List<UserHumg> findLeaderboard(Pageable pageable);
 
+    // Thống kê
     long countByRole(String role);
+    long countByIsActive(Boolean isActive);
+    long countByIsInternal(Boolean isInternal);
 }

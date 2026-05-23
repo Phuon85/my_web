@@ -89,7 +89,9 @@ public class AuthService {
                 .totalScore(u.getTotalScore())
                 .rank(u.getRank())
                 .isInternal(u.getIsInternal())
+                .isActive(u.getIsActive())
                 .createdAt(u.getCreatedAt())
+                .updatedAt(u.getUpdatedAt())
                 .build();
     }
 }

@@ -18,6 +18,10 @@ import DocumentsPage from './pages/documents/DocumentsPage';
 import RoadmapPage   from './pages/roadmap/RoadmapPage';
 import LessonPage    from './pages/roadmap/LessonPage';
 
+// ── Admin ────────────────────────────────────────────────────────────────────
+import AdminOverviewPage from './pages/admin/AdminOverviewPage';
+import AdminUsersPage    from './pages/admin/AdminUsersPage';
+
 // ── Route guards ────────────────────────────────────────────────────────────
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -27,6 +31,18 @@ function PrivateRoute({ children }) {
     </div>
   );
   return user ? children : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:'#f5f6fa', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <Spinner size={44} />
+    </div>
+  );
+  if (!user) return <Navigate to="/login" replace />;
+  const isAdmin = user.role === 'ADMIN' || user.role === 'MANAGER';
+  return isAdmin ? children : <Navigate to="/home" replace />;
 }
 
 function PublicRoute({ children }) {
@@ -64,6 +80,10 @@ function AppRoutes() {
       <Route path="/roadmap/chapter/:chapterId/lesson/:lessonId"
              element={<PrivateRoute><LessonPage /></PrivateRoute>} />
 
+
+      {/* Admin */}
+      <Route path="/admin"        element={<AdminRoute><AdminOverviewPage /></AdminRoute>} />
+      <Route path="/admin/users"  element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

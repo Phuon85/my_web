@@ -20,5 +20,7 @@ public class UserInfoResponse {
     private Integer totalScore;
     private Integer rank;
     private Boolean isInternal;
+    private Boolean isActive;        // ← thêm mới
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt; // ← thêm mới (dùng làm lastLoginAt tạm)
 }

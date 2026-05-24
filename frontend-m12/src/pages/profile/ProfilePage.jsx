@@ -11,6 +11,92 @@ const KHOAS = [
   'Khoa Kinh tế','Khoa Môi trường',
 ].map(k => ({ value: k, label: k }));
 
+// ── Change Password Modal ────────────────────────────────────────────────────
+function ChangePasswordModal({ open, onClose, onSuccess }) {
+  const [form, setForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+
+  useEffect(() => {
+    if (!open) { setForm({ oldPassword: '', newPassword: '', confirmPassword: '' }); setError(''); }
+  }, [open]);
+
+  if (!open) return null;
+
+  const inp = {
+    width: '100%', boxSizing: 'border-box', padding: '10px 14px',
+    border: '1.5px solid #e0e0e0', borderRadius: 8,
+    fontSize: 14, fontFamily: 'inherit', outline: 'none',
+    background: '#fafafa', color: '#222', marginBottom: 12,
+  };
+
+  const handleSubmit = async () => {
+    if (!form.oldPassword || !form.newPassword || !form.confirmPassword) {
+      setError('Vui lòng điền đầy đủ thông tin.'); return;
+    }
+    if (form.newPassword.length < 6) {
+      setError('Mật khẩu mới phải có ít nhất 6 ký tự.'); return;
+    }
+    if (form.newPassword !== form.confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp.'); return;
+    }
+    setLoading(true); setError('');
+    try {
+      await authAPI.changePassword({ oldPassword: form.oldPassword, newPassword: form.newPassword });
+      onSuccess('Đổi mật khẩu thành công!');
+      onClose();
+    } catch (e) {
+      setError(e.response?.data?.message || 'Đổi mật khẩu thất bại. Kiểm tra lại mật khẩu cũ.');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.48)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.22)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: '#1a202c', margin: 0 }}>🔐 Đổi mật khẩu</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#aaa' }}>✕</button>
+        </div>
+
+        {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 12, color: '#991b1b', fontSize: 13 }}>❌ {error}</div>}
+
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Mật khẩu hiện tại</label>
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <input type={showOld ? 'text' : 'password'} style={{ ...inp, marginBottom: 0, paddingRight: 44 }}
+            placeholder="Nhập mật khẩu hiện tại"
+            value={form.oldPassword} onChange={e => setForm(f => ({ ...f, oldPassword: e.target.value }))} />
+          <span onClick={() => setShowOld(p => !p)} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#aaa' }}>{showOld ? '🙈' : '👁'}</span>
+        </div>
+
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Mật khẩu mới</label>
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <input type={showNew ? 'text' : 'password'} style={{ ...inp, marginBottom: 0, paddingRight: 44 }}
+            placeholder="Tối thiểu 6 ký tự"
+            value={form.newPassword} onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))} />
+          <span onClick={() => setShowNew(p => !p)} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#aaa' }}>{showNew ? '🙈' : '👁'}</span>
+        </div>
+
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Xác nhận mật khẩu mới</label>
+        <input type="password" style={inp} placeholder="Nhập lại mật khẩu mới"
+          value={form.confirmPassword}
+          onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+          onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1.5px solid #e0e0e0', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Hủy</button>
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ flex: 2, padding: 11, background: loading ? '#ccc' : 'linear-gradient(90deg,#1a3a8f,#1a7a4a)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            {loading ? '⏳ Đang xử lý...' : '🔐 Xác nhận đổi mật khẩu'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
@@ -24,6 +110,7 @@ export default function ProfilePage() {
   const [toast,    setToast]    = useState({ msg:'', type:'success' });
   const [badges,   setBadges]   = useState([]);
   const [history,  setHistory]  = useState([]);
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   // ── Fetch profile thật từ API ────────────────────────────────────────────
   useEffect(() => {
@@ -180,6 +267,38 @@ export default function ProfilePage() {
                     {KHOAS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
                   </select>
 
+                  {/* Avatar file picker */}
+                  <label style={{ fontSize:12, fontWeight:600, color:'#555', display:'block', marginBottom:6 }}>Ảnh đại diện</label>
+                  <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+                    <div style={{ width:52, height:52, borderRadius:'50%', overflow:'hidden', border:'2px solid #e0e0e0', flexShrink:0, background:'#f5f5f5', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>
+                      {form.avatarUrl
+                        ? <img src={form.avatarUrl} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="" />
+                        : '👨‍🎓'}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <input
+                        id="avatar-file-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        style={{ display:'none' }}
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          if (file.size > 2 * 1024 * 1024) { alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 2MB.'); return; }
+                          const reader = new FileReader();
+                          reader.onload = ev => setForm(f => ({ ...f, avatarUrl: ev.target.result }));
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                      <button type="button"
+                        onClick={() => document.getElementById('avatar-file-input').click()}
+                        style={{ padding:'7px 14px', border:'1.5px solid #e0e0e0', borderRadius:8, background:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#555', display:'block', marginBottom:4 }}>
+                        📷 Chọn ảnh
+                      </button>
+                      <p style={{ fontSize:11, color:'#aaa', margin:0 }}>JPG, PNG, WEBP · Tối đa 2MB</p>
+                    </div>
+                  </div>
+
                   <button onClick={handleSave} disabled={saving}
                     style={{ width:'100%', padding:11, background: saving?'#e0e0e0':'linear-gradient(90deg,#1a7a4a,#1d8a55)', border:'none', borderRadius:8, color: saving?'#aaa':'#fff', fontWeight:700, cursor: saving?'not-allowed':'pointer', fontFamily:'inherit', fontSize:14 }}>
                     {saving ? '⏳ Đang lưu...' : '💾 Lưu thay đổi'}
@@ -216,7 +335,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Đổi mật khẩu */}
-            <button onClick={() => navigate('/change-password')}
+            <button onClick={() => setChangePwOpen(true)}
               style={{ width:'100%', padding:'11px', border:'1.5px solid #e0e0e0', borderRadius:10, background:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'#555', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
               🔐 Đổi mật khẩu
             </button>
@@ -294,6 +413,12 @@ export default function ProfilePage() {
           </div>
         </div>
       </PageContainer>
+
+      <ChangePasswordModal
+        open={changePwOpen}
+        onClose={() => setChangePwOpen(false)}
+        onSuccess={(msg) => setToast({ msg, type: 'success' })}
+      />
     </div>
   );
 }

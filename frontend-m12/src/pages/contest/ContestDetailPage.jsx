@@ -22,10 +22,11 @@ function CountdownBox({ targetDate }) {
       const d = Math.floor(diff / 86400000);
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      setLeft(`${d} ngày ${h} giờ ${m} phút`);
+      const s = Math.floor((diff % 60000) / 1000);
+      setLeft(`${d} ngày ${h} giờ ${m} phút ${s} giây`);
     };
     tick();
-    const t = setInterval(tick, 60000);
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, [targetDate]);
   return <span>{left}</span>;
@@ -44,6 +45,8 @@ export default function ContestDetailPage() {
   const [registered, setRegistered]   = useState(false);
   const [registering, setRegistering] = useState(false);
   const [toast, setToast]             = useState({ msg: '', type: 'success' });
+  const [participantSearch, setParticipantSearch] = useState('');
+  const [participantSort,   setParticipantSort]   = useState('rank');
 
   const notify = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast({ msg: '', type: 'success' }), 3000); };
 
@@ -222,31 +225,68 @@ export default function ContestDetailPage() {
 
             {tab === 3 && (
               <Card>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a202c', margin: '0 0 20px' }}>👥 Danh sách thí sinh ({participants.length})</h3>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a202c', margin: 0 }}>👥 Danh sách thí sinh ({participants.length})</h3>
+                  <div style={{ display:'flex', gap:8 }}>
+                    {/* Search */}
+                    <div style={{ position:'relative' }}>
+                      <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#aaa', fontSize:13 }}>🔍</span>
+                      <input
+                        placeholder="Tìm thí sinh..."
+                        value={participantSearch || ''}
+                        onChange={e => setParticipantSearch(e.target.value)}
+                        style={{ padding:'8px 10px 8px 30px', border:'1.5px solid #e0e0e0', borderRadius:8, fontSize:13, outline:'none', fontFamily:'inherit', width:160 }}
+                      />
+                    </div>
+                    {/* Sort */}
+                    <select value={participantSort || 'rank'} onChange={e => setParticipantSort(e.target.value)}
+                      style={{ padding:'8px 10px', border:'1.5px solid #e0e0e0', borderRadius:8, fontSize:13, outline:'none', fontFamily:'inherit', cursor:'pointer', background:'#fff' }}>
+                      <option value="rank">Theo thứ hạng</option>
+                      <option value="name">Theo tên (A-Z)</option>
+                      <option value="score_desc">Điểm cao → thấp</option>
+                      <option value="score_asc">Điểm thấp → cao</option>
+                    </select>
+                  </div>
+                </div>
                 {participants.length === 0 ? (
                   <p style={{ color: '#aaa', fontSize: 14 }}>Chưa có thí sinh đăng ký.</p>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #e8ecf0' }}>
-                        {['#', 'Họ và tên', 'MSSV', 'Khoa', 'Điểm'].map(h => (
-                          <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 13, color: '#888', fontWeight: 600 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {participants.map((p, i) => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #f0f4f8' }}>
-                          <td style={{ padding: '12px 14px', fontWeight: 800, color: ['#f59e0b','#9ca3af','#cd7c2f'][i] || '#888', fontSize: 14 }}>#{i+1}</td>
-                          <td style={{ padding: '12px 14px', fontWeight: 600, fontSize: 14, color: '#1a202c' }}>{p.fullName}</td>
-                          <td style={{ padding: '12px 14px', fontSize: 13, color: '#888' }}>{p.mssv || '—'}</td>
-                          <td style={{ padding: '12px 14px', fontSize: 13, color: '#888' }}>{p.khoa || '—'}</td>
-                          <td style={{ padding: '12px 14px', fontSize: 14, fontWeight: 700, color: p.score ? '#1a3a8f' : '#ccc' }}>{p.score ?? '—'}</td>
+                ) : (() => {
+                  const search = (participantSearch || '').toLowerCase();
+                  const sort = participantSort || 'rank';
+                  let list = participants.filter(p =>
+                    !search || (p.fullName||'').toLowerCase().includes(search) || (p.mssv||'').toLowerCase().includes(search)
+                  );
+                  if (sort === 'name') list = [...list].sort((a,b) => (a.fullName||'').localeCompare(b.fullName||''));
+                  else if (sort === 'score_desc') list = [...list].sort((a,b) => (b.score||0)-(a.score||0));
+                  else if (sort === 'score_asc')  list = [...list].sort((a,b) => (a.score||0)-(b.score||0));
+
+                  if (list.length === 0) return (
+                    <p style={{ color:'#aaa', fontSize:14, textAlign:'center', padding:'20px 0' }}>Không tìm thấy thí sinh nào phù hợp.</p>
+                  );
+
+                  return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #e8ecf0' }}>
+                          {['#', 'Họ và tên', 'MSSV', 'Khoa', 'Điểm'].map(h => (
+                            <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 13, color: '#888', fontWeight: 600 }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                      </thead>
+                      <tbody>
+                        {list.map((p, i) => (
+                          <tr key={p.id} style={{ borderBottom: '1px solid #f0f4f8' }}>
+                            <td style={{ padding: '12px 14px', fontWeight: 800, color: ['#f59e0b','#9ca3af','#cd7c2f'][i] || '#888', fontSize: 14 }}>#{i+1}</td>
+                            <td style={{ padding: '12px 14px', fontWeight: 600, fontSize: 14, color: '#1a202c' }}>{p.fullName}</td>
+                            <td style={{ padding: '12px 14px', fontSize: 13, color: '#888' }}>{p.mssv || '—'}</td>
+                            <td style={{ padding: '12px 14px', fontSize: 13, color: '#888' }}>{p.khoa || '—'}</td>
+                            <td style={{ padding: '12px 14px', fontSize: 14, fontWeight: 700, color: p.score ? '#1a3a8f' : '#ccc' }}>{p.score ?? '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </Card>
             )}
           </div>

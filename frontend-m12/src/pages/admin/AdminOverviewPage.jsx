@@ -52,10 +52,10 @@ export default function AdminOverviewPage() {
   ] : [];
 
   const QUICK_ACTIONS = [
-    { icon: '➕', label: 'Tạo kỳ thi mới',   path: '/admin/exams',   color: '#009688' },
-    { icon: '👥', label: 'Thêm người dùng',  path: '/admin/users',   color: '#3b82f6' },
-    { icon: '📋', label: 'Xem nhật ký',      path: '/admin/logs',    color: '#f59e0b' },
-    { icon: '⚙️',  label: 'Cấu hình hệ thống', path: '/admin/settings', color: '#6b7280' },
+    { icon: '➕', label: 'Tạo kỳ thi mới',   path: '/admin/exams?action=create',   color: '#009688' },
+    { icon: '👥', label: 'Thêm người dùng',  path: '/admin/users?action=create',   color: '#3b82f6' },
+    { icon: '📋', label: 'Xem nhật ký',      path: '/admin/logs',                  color: '#f59e0b' },
+    { icon: '⚙️',  label: 'Cấu hình hệ thống', path: '/admin',                    color: '#6b7280' },
   ];
 
   return (
@@ -107,7 +107,7 @@ export default function AdminOverviewPage() {
           { icon: '👥', label: 'Quản lý người dùng', desc: 'Thêm, khóa, phân quyền tài khoản', path: '/admin/users', color: '#3b82f6' },
           { icon: '🎓', label: 'Quản lý kỳ thi',     desc: 'Tạo, công bố và theo dõi kỳ thi',   path: '/admin/exams', color: '#10b981' },
           { icon: '📋', label: 'Nhật ký hệ thống',   desc: 'Lịch sử hoạt động người dùng',        path: '/admin/logs',  color: '#f59e0b' },
-          { icon: '⚙️',  label: 'Cấu hình',           desc: 'Thiết lập tham số hệ thống',           path: '/admin/settings', color: '#8b5cf6' },
+          { icon: '⚙️',  label: 'Cấu hình',           desc: 'Thiết lập tham số hệ thống',           path: '/admin', color: '#8b5cf6' },
         ].map(c => (
           <div key={c.path} onClick={() => navigate(c.path)} style={{
             background: '#fff', borderRadius: 14, padding: '20px',

@@ -1,4 +1,6 @@
 import React from 'react';
+export { default as SkeletonCard } from './SkeletonCard';
+export { default as Avatar } from './Avatar';
 
 // ── Loading Spinner ───────────────────────────────────────────────────────
 export function Spinner({ size = 36, color = '#1a3a8f' }) {

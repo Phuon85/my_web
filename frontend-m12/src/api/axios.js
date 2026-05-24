@@ -100,3 +100,46 @@ export const adminAPI = {
   dashboard: ()       => api.get('/admin/dashboard'),
   logs:      params   => api.get('/admin/logs', { params }),
 };
+// ── Forum ─────────────────────────────────────────────────────────────────────
+export const forumAPI = {
+  // Danh sách bài gốc (phân trang)
+  getThreads:  (params) => api.get('/forum/threads', { params }),
+  // Chi tiết bài gốc + tăng view
+  getThread:   (id)     => api.get(`/forum/threads/${id}`),
+  // Bình luận của bài gốc
+  getComments: (id)     => api.get(`/forum/threads/${id}/comments`),
+  // Tạo bài gốc (parentId=null) hoặc bình luận
+  create:      (data)   => api.post('/forum/posts', data),
+  // Sửa
+  update:      (id, data) => api.put(`/forum/posts/${id}`, data),
+  // Xóa
+  delete:      (id)     => api.delete(`/forum/posts/${id}`),
+  // Ghim / Bỏ ghim
+  togglePin:   (id)     => api.patch(`/forum/posts/${id}/pin`),
+  // Ẩn / Hiện
+  toggleHide:  (id)     => api.patch(`/forum/posts/${id}/hide`),
+  // Like / Unlike
+  toggleLike:  (id)     => api.patch(`/forum/posts/${id}/like`),
+};
+
+// ── News ──────────────────────────────────────────────────────────────────────
+export const newsAPI = {
+  // Danh sách tin đã xuất bản
+  getAll:         (params)     => api.get('/news', { params }),
+  // Tin nổi bật
+  getFeatured:    ()           => api.get('/news/featured'),
+  // Chi tiết 1 tin
+  getById:        (id)         => api.get(`/news/${id}`),
+  // Admin: tất cả kể cả draft
+  adminGetAll:    (params)     => api.get('/news/admin/all', { params }),
+  // Tạo bài tin
+  create:         (data)       => api.post('/news', data),
+  // Sửa
+  update:         (id, data)   => api.put(`/news/${id}`, data),
+  // Xuất bản / Thu hồi
+  togglePublish:  (id)         => api.patch(`/news/${id}/publish`),
+  // Nổi bật / Bỏ nổi bật
+  toggleFeatured: (id)         => api.patch(`/news/${id}/feature`),
+  // Xóa
+  delete:         (id)         => api.delete(`/news/${id}`),
+};

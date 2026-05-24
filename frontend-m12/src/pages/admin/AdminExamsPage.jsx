@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { contestAPI } from '../../api/axios';
 import { Spinner, Modal } from '../../components/ui';
@@ -143,6 +144,7 @@ function ContestFormModal({ open, onClose, editContest, onSaved }) {
 const PAGE_SIZE = 10;
 
 export default function AdminExamsPage() {
+  const location = useLocation();
   const [contests, setContests]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [toast, setToast]         = useState({ msg: '', type: 'success' });
@@ -151,6 +153,15 @@ export default function AdminExamsPage() {
   const [page, setPage]           = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editContest, setEdit]    = useState(null);
+
+  // Auto-open create modal if navigated with ?action=create
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('action') === 'create') {
+      setEdit(null);
+      setShowModal(true);
+    }
+  }, [location.search]);
 
   const notify = (msg, type = 'success') => {
     setToast({ msg, type });

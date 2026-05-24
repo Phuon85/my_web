@@ -137,6 +137,7 @@ export default function DocumentsPage() {
   const [showUpload,  setShowUpload]  = useState(false);
   const [toast,       setToast]       = useState('');
   const [page,        setPage]        = useState(1);
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const PER_PAGE = 12;
 
   const canUpload = ['TEACHER','MANAGER','ADMIN'].includes(user?.role);
@@ -166,8 +167,16 @@ export default function DocumentsPage() {
   }, [search]);
 
   // ── Xóa tài liệu ────────────────────────────────────────────────────────
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, title }
+
   const handleDelete = async (id, title) => {
-    if (!window.confirm(`Xóa tài liệu "${title}"?`)) return;
+    setConfirmDelete({ id, title });
+  };
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    const { id } = confirmDelete;
+    setConfirmDelete(null);
     try {
       await documentAPI.delete(id);
       showToast('Đã xóa tài liệu!');
@@ -222,6 +231,7 @@ export default function DocumentsPage() {
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:32 }}>
               {paged.map(doc => (
                 <div key={doc.id}
+                  onClick={() => setSelectedDoc(doc)}
                   style={{ background:'#fff', borderRadius:14, padding:'22px 16px 16px', border:'1.5px solid #eee', textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.06)', transition:'box-shadow 0.15s,transform 0.15s', cursor:'pointer' }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow='0 6px 20px rgba(0,0,0,0.1)'; e.currentTarget.style.transform='translateY(-2px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)'; e.currentTarget.style.transform='none'; }}>
@@ -293,6 +303,81 @@ export default function DocumentsPage() {
       </PageContainer>
 
       <UploadModal open={showUpload} onClose={() => setShowUpload(false)} onDone={(msg) => { showToast(msg); setShowUpload(false); fetchDocs(); }} />
+
+      {/* Confirm Delete Dialog */}
+      {confirmDelete && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.48)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <div style={{ background:'#fff', borderRadius:14, padding:28, maxWidth:380, width:'100%', boxShadow:'0 12px 40px rgba(0,0,0,0.2)', textAlign:'center' }}>
+            <div style={{ fontSize:44, marginBottom:12 }}>🗑️</div>
+            <h3 style={{ fontSize:16, fontWeight:700, color:'#1a202c', margin:'0 0 8px' }}>Xóa tài liệu?</h3>
+            <p style={{ color:'#888', fontSize:13, marginBottom:22 }}>
+              Bạn có chắc muốn xóa <strong>"{confirmDelete.title}"</strong>? Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex:1, padding:11, border:'1.5px solid #e0e0e0', borderRadius:8, background:'#fff', fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>Hủy</button>
+              <button onClick={doDelete} style={{ flex:1, padding:11, background:'#e53e3e', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedDoc && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+          onClick={e => e.target===e.currentTarget && setSelectedDoc(null)}>
+          <div style={{ background:'#fff', borderRadius:16, padding:28, width:'100%', maxWidth:520, boxShadow:'0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
+              <div style={{ flex:1, marginRight:12 }}>
+                <h3 style={{ fontSize:17, fontWeight:700, color:'#1a202c', margin:'0 0 6px', lineHeight:1.3 }}>{selectedDoc.title}</h3>
+                {selectedDoc.subject && (
+                  <span style={{ fontSize:11, background:'#eff6ff', color:'#1d4ed8', padding:'2px 8px', borderRadius:12, fontWeight:600 }}>{selectedDoc.subject}</span>
+                )}
+              </div>
+              <button onClick={() => setSelectedDoc(null)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#aaa', flexShrink:0 }}>✕</button>
+            </div>
+
+            {/* File icon big */}
+            <div style={{ textAlign:'center', marginBottom:20 }}>
+              <div style={{ width:80, height:80, borderRadius:16, background: FILE_COLOR[selectedDoc.fileType]||'#888', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 12px', boxShadow:`0 6px 20px ${FILE_COLOR[selectedDoc.fileType]||'#888'}44` }}>
+                {FILE_ICON[selectedDoc.fileType]||'📄'}
+              </div>
+              <p style={{ fontSize:13, color:'#555', margin:0 }}>
+                <strong>{selectedDoc.fileType || 'FILE'}</strong>
+                {selectedDoc.fileSize ? ` • ${(selectedDoc.fileSize/1024/1024).toFixed(2)} MB` : ''}
+              </p>
+            </div>
+
+            {selectedDoc.description && (
+              <div style={{ background:'#f8fafc', borderRadius:8, padding:'12px 14px', marginBottom:16, fontSize:13, color:'#555', lineHeight:1.6 }}>
+                {selectedDoc.description}
+              </div>
+            )}
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:20, fontSize:13 }}>
+              {[
+                ['👤 Người đăng', selectedDoc.uploaderName || '—'],
+                ['📅 Ngày đăng', selectedDoc.createdAtFormatted || '—'],
+                ['📂 Loại file', selectedDoc.fileType || '—'],
+                ['🌐 Quyền', selectedDoc.isPublic ? 'Công khai' : 'Riêng tư'],
+              ].map(([label, val]) => (
+                <div key={label} style={{ background:'#f8fafc', borderRadius:8, padding:'10px 12px' }}>
+                  <p style={{ color:'#888', fontSize:11, margin:'0 0 2px', fontWeight:600 }}>{label}</p>
+                  <p style={{ color:'#1a202c', fontWeight:600, margin:0, fontSize:13 }}>{val}</p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setSelectedDoc(null)} style={{ flex:1, padding:11, border:'1.5px solid #e0e0e0', borderRadius:8, background:'#fff', fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>Đóng</button>
+              <a
+                href={`http://localhost:8080/api/documents/${selectedDoc.id}/download`}
+                download
+                onClick={() => setSelectedDoc(null)}
+                style={{ flex:2, padding:11, background:'linear-gradient(90deg,#1a3a8f,#1a7a4a)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                ⬇ Tải xuống
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

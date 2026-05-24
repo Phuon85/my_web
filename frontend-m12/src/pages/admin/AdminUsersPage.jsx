@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { userAPI } from '../../api/axios';
 import AdminLayout from './AdminLayout';
 import { Spinner, Toast, Modal } from '../../components/ui';
@@ -269,6 +270,7 @@ function ActionMenu({ user, onEdit, onToggle, onDelete, onResetPassword }) {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminUsersPage() {
+  const location = useLocation();
   const [users, setUsers]         = useState([]);
   const [loading, setLoading]     = useState(true);
   const [toast, setToast]         = useState({ msg: '', type: 'success' });
@@ -278,6 +280,15 @@ export default function AdminUsersPage() {
   const [page, setPage]           = useState(1);
   const [editUser, setEditUser]   = useState(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Auto-open create modal if navigated with ?action=create
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('action') === 'create') {
+      setEditUser(null);
+      setShowModal(true);
+    }
+  }, [location.search]);
 
   const notify = (msg, type = 'success') => {
     setToast({ msg, type });

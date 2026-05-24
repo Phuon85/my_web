@@ -4,6 +4,79 @@ import AuthLayout from '../../components/layout/AuthLayout';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api/axios';
 
+// ── Forgot Password Modal ───────────────────────────────────────────────────
+function ForgotPasswordModal({ open, onClose }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSend = async () => {
+    if (!email.trim()) { setError('Vui lòng nhập email.'); return; }
+    setLoading(true); setError('');
+    try {
+      // Gọi API nếu có, nếu không thì giả lập thành công
+      if (authAPI.forgotPassword) {
+        await authAPI.forgotPassword({ email });
+      }
+      setSent(true);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally { setLoading(false); }
+  };
+
+  if (!open) return null;
+
+  const handleClose = () => { onClose(); setSent(false); setEmail(''); setError(''); };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.48)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      onClick={e => e.target === e.currentTarget && handleClose()}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.22)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: '#1a202c', margin: 0 }}>🔑 Quên mật khẩu</h3>
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#aaa' }}>✕</button>
+        </div>
+
+        {sent ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+            <p style={{ fontWeight: 700, fontSize: 15, color: '#1a202c', marginBottom: 8 }}>Email đã được gửi!</p>
+            <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>
+              Kiểm tra hộp thư <strong>{email}</strong> để nhận hướng dẫn đặt lại mật khẩu.
+            </p>
+            <button onClick={handleClose}
+              style={{ padding: '10px 24px', background: 'linear-gradient(90deg,#f59e0b,#f97316)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+              Đã hiểu
+            </button>
+          </div>
+        ) : (
+          <>
+            <p style={{ color: '#888', fontSize: 13, marginBottom: 16 }}>
+              Nhập email đăng ký của bạn. Chúng tôi sẽ gửi hướng dẫn đặt lại mật khẩu.
+            </p>
+            {error && <p style={{ color: '#e53e3e', fontSize: 13, marginBottom: 10 }}>❌ {error}</p>}
+            <input
+              type="email"
+              placeholder="Email của bạn"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 14 }} />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleClose} style={{ flex: 1, padding: 11, border: '1.5px solid #e0e0e0', borderRadius: 8, background: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Hủy</button>
+              <button onClick={handleSend} disabled={loading}
+                style={{ flex: 2, padding: 11, background: loading ? '#ccc' : 'linear-gradient(90deg,#f59e0b,#f97316)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {loading ? '⏳ Đang gửi...' : '📤 Gửi email'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate  = useNavigate();
@@ -11,6 +84,7 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const handleLogin = async () => {
     if (!form.credential || !form.password) { setError('Vui lòng điền đầy đủ thông tin.'); return; }
@@ -32,7 +106,8 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthLayout>
+    <>
+      <AuthLayout>
       <div style={{ maxWidth:380, width:'100%', margin:'0 auto' }}>
         <h2 style={{ fontSize:28, fontWeight:800, color:'#111', margin:'0 0 6px' }}>
           Chào mừng trở lại!
@@ -95,12 +170,14 @@ export default function LoginPage() {
         </button>
 
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
-          <span style={{ color:'#1a3a8f', cursor:'pointer', textDecoration:'underline' }}>
+          <span onClick={() => setForgotOpen(true)} style={{ color:'#1a3a8f', cursor:'pointer', textDecoration:'underline' }}>
             Quên mật khẩu?
           </span>
           <Link to="/register" style={{ color:'#666', textDecoration:'none' }}>Đăng ký ngay</Link>
         </div>
       </div>
     </AuthLayout>
+      <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
+    </>
   );
 }

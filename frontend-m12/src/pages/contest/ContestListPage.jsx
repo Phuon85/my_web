@@ -196,7 +196,7 @@ export default function ContestListPage() {
                     disabled={isDisabled || registering === c.id}
                     onClick={e => {
                       e.stopPropagation();
-                      if (c.status === 'ENDED') navigate(`/contests/${c.id}/results`);
+                      if (c.status === 'ENDED') navigate(`/contests/${c.id}`);
                       else handleRegister(e, c.id);
                     }}
                     style={{ width:'100%', padding:'10px', borderRadius:8, background: isDisabled?'#f0f0f0':sm.btnColor, color: isDisabled?'#999':'#fff', border:'none', fontSize:13, fontWeight:700, cursor: isDisabled?'not-allowed':'pointer', fontFamily:'inherit' }}>

@@ -16,10 +16,12 @@ import AdminOverviewPage from './pages/admin/AdminOverviewPage';
 import AdminUsersPage    from './pages/admin/AdminUsersPage';
 import AdminExamsPage    from './pages/admin/AdminExamsPage';
 import AdminLogsPage     from './pages/admin/AdminLogsPage';
+import AdminTeamsPage    from './pages/admin/AdminTeamsPage';
 import ForumPage         from './pages/forum/ForumPage';
 import ForumDetailPage   from './pages/forum/ForumDetailPage';
 import NewsPage          from './pages/news/NewsPage';
 import NewsDetailPage    from './pages/news/NewsDetailPage';
+import TeamPage          from './pages/team/TeamPage';
 
 function LoadingScreen() {
   return (
@@ -75,8 +77,11 @@ function AppRoutes() {
       <Route path="/news"     element={<PrivateRoute><NewsPage /></PrivateRoute>} />
       <Route path="/news/:id" element={<PrivateRoute><NewsDetailPage /></PrivateRoute>} />
 
+      <Route path="/teams"   element={<PrivateRoute><TeamPage /></PrivateRoute>} />
+
       <Route path="/admin"       element={<AdminRoute><AdminOverviewPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+      <Route path="/admin/teams" element={<AdminRoute><AdminTeamsPage /></AdminRoute>} />
       <Route path="/admin/exams" element={<AdminRoute><AdminExamsPage /></AdminRoute>} />
       <Route path="/admin/logs"  element={<AdminRoute><AdminLogsPage /></AdminRoute>} />
 

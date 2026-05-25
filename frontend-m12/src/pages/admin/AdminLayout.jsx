@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const MENU = [
   { icon: '📊', label: 'Tổng quan',   path: '/admin' },
   { icon: '👥', label: 'Người dùng',  path: '/admin/users' },
+  { icon: '🏆', label: 'Đội tuyển',   path: '/admin/teams' },
   { icon: '🎓', label: 'Kỳ thi',      path: '/admin/exams' },
   { icon: '📋', label: 'Logs',        path: '/admin/logs' },
   { icon: '⚙️',  label: 'Cấu hình',  path: '/admin/settings' },

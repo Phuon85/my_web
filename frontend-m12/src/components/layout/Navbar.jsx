@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const NAV = [
   { label: 'Trang chủ',    path: '/home' },
   { label: 'Cuộc thi',     path: '/contests' },
+  { label: 'Đội tuyển',    path: '/teams' },
   { label: 'Kho tài liệu', path: '/documents' },
   { label: 'Diễn đàn',     path: '/forum' },
   { label: 'Tin tức',      path: '/news' },

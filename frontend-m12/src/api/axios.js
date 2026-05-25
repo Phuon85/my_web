@@ -143,3 +143,20 @@ export const newsAPI = {
   // Xóa
   delete:         (id)         => api.delete(`/news/${id}`),
 };
+
+// ── Team ──────────────────────────────────────────────────────────────────────
+export const teamAPI = {
+  // Public
+  getAll:          ()                       => api.get('/teams'),
+  getById:         (id)                     => api.get(`/teams/${id}`),
+  // Admin
+  adminGetAll:     (q)                      => api.get('/teams/admin/all', { params: { q } }),
+  create:          (data)                   => api.post('/teams', data),
+  update:          (id, data)               => api.put(`/teams/${id}`, data),
+  toggleActive:    (id)                     => api.patch(`/teams/${id}/toggle-active`),
+  delete:          (id)                     => api.delete(`/teams/${id}`),
+  // Members
+  addMember:       (teamId, data)           => api.post(`/teams/${teamId}/members`, data),
+  removeMember:    (teamId, userId)         => api.delete(`/teams/${teamId}/members/${userId}`),
+  updateMemberRole:(teamId, userId, role)   => api.patch(`/teams/${teamId}/members/${userId}/role`, null, { params: { role } }),
+};

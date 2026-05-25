@@ -48,7 +48,7 @@ public class UserHumg {
     @Builder.Default
     private Boolean isActive = true;
 
-    @Column(name = "avatar_url")
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Column(name = "total_score")

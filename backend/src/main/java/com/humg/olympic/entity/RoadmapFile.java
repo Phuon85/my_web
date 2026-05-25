@@ -21,17 +21,28 @@ public class RoadmapFile {
     @JoinColumn(name = "chapter_id", nullable = false)
     private RoadmapChapter chapter;
 
-    // Liên kết tới Document đã upload
+    // Phân loại item (Tài liệu hoặc Video)
+    public enum ItemType { DOCUMENT, VIDEO_LINK }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "item_type", nullable = false)
+    @Builder.Default
+    private ItemType itemType = ItemType.DOCUMENT;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id")
     private Document document;
 
-    // Thứ tự hiển thị trong chương
+    @Column(name = "external_url", length = 500)
+    private String externalUrl;
+    
+    @Column(name = "title", length = 255)
+    private String title;
+
     @Column(name = "order_index", nullable = false)
     @Builder.Default
     private Integer orderIndex = 0;
 
-    // Có cho xem trước (PDF preview, video) không
     @Column(name = "can_preview", nullable = false)
     @Builder.Default
     private Boolean canPreview = true;

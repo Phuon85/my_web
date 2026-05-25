@@ -42,12 +42,11 @@ export default function Navbar({ unreadCount = 0 }) {
       {/* Logo */}
       <div onClick={() => navigate('/home')}
         style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 24, cursor: 'pointer', flexShrink: 0 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '50%',
-          border: '2px solid rgba(255,255,255,0.5)',
-          background: 'rgba(255,255,255,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-        }}></div>
+        <img 
+          src="./humg_logo.png" 
+          alt="HUMG Olympic Logo" 
+          style={{ width: 42, height: 42, objectFit: 'contain' }} 
+        />
         <span style={{ color: '#fff', fontWeight: 800, fontSize: 15, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
           HUMG OLYMPIC
         </span>

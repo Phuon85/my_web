@@ -20,14 +20,12 @@ public class Roadmap {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Tên lộ trình: "Lộ trình Chinh phục Olympic Đại số"
     @Column(nullable = false, length = 200)
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    // Môn học: Toán học | Vật lý | ...
     @Column(length = 100)
     private String subject;
 
@@ -39,7 +37,17 @@ public class Roadmap {
     @Builder.Default
     private Boolean isActive = true;
 
-    // Các chương con (cascade: xóa roadmap → xóa luôn chapters)
+    // Phân quyền Công khai / Nội bộ đội tuyển
+    public enum Visibility { PUBLIC, PRIVATE }
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Visibility visibility = Visibility.PUBLIC;
+
+    @Column(name = "team_id")
+    private Long teamId; 
+
     @OneToMany(mappedBy = "roadmap", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
     @Builder.Default

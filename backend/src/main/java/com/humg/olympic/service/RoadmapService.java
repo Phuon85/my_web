@@ -23,7 +23,6 @@ public class RoadmapService {
     private final UserRepository           userRepository;
     private final DocumentService          documentService;
 
-    // ── Lấy tất cả lộ trình ────────────────────────────────────────────────────
     public List<RoadmapResponse> getAll(String subject) {
         List<Roadmap> list = (subject != null && !subject.isBlank())
             ? roadmapRepository.findBySubjectAndIsActiveTrueOrderByCreatedAtDesc(subject)
@@ -31,14 +30,12 @@ public class RoadmapService {
         return list.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── Chi tiết 1 lộ trình (có đầy đủ chương + file) ──────────────────────────
     public RoadmapResponse getById(Long id) {
         Roadmap roadmap = roadmapRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lộ trình"));
         return toResponseFull(roadmap);
     }
 
-    // ── Tạo lộ trình mới ────────────────────────────────────────────────────────
     @Transactional
     public RoadmapResponse create(CreateRoadmapRequest req) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -51,20 +48,19 @@ public class RoadmapService {
             .subject(req.getSubject())
             .creator(creator)
             .isActive(true)
+            .visibility(Roadmap.Visibility.PUBLIC) // Mặc định public, có thể đổi theo req
             .build();
 
         roadmapRepository.save(roadmap);
         return toResponse(roadmap);
     }
 
-    // ── Cập nhật lộ trình ───────────────────────────────────────────────────────
     @Transactional
     public RoadmapResponse update(Long id, CreateRoadmapRequest req) {
         Roadmap roadmap = roadmapRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lộ trình"));
 
-        if (req.getTitle() != null && !req.getTitle().isBlank())
-            roadmap.setTitle(req.getTitle());
+        if (req.getTitle() != null && !req.getTitle().isBlank()) roadmap.setTitle(req.getTitle());
         if (req.getDescription() != null) roadmap.setDescription(req.getDescription());
         if (req.getSubject() != null)     roadmap.setSubject(req.getSubject());
 
@@ -72,7 +68,6 @@ public class RoadmapService {
         return toResponse(roadmap);
     }
 
-    // ── Xóa lộ trình ────────────────────────────────────────────────────────────
     @Transactional
     public void delete(Long id) {
         Roadmap roadmap = roadmapRepository.findById(id)
@@ -80,15 +75,12 @@ public class RoadmapService {
         roadmapRepository.delete(roadmap);
     }
 
-    // ── Thêm chương vào lộ trình ────────────────────────────────────────────────
     @Transactional
     public RoadmapChapterResponse addChapter(Long roadmapId, CreateChapterRequest req) {
         Roadmap roadmap = roadmapRepository.findById(roadmapId)
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lộ trình"));
 
-        // Tự tính orderIndex nếu không truyền
-        int nextOrder = chapterRepository
-            .findByRoadmapIdOrderByOrderIndexAsc(roadmapId).size();
+        int nextOrder = chapterRepository.findByRoadmapIdOrderByOrderIndexAsc(roadmapId).size();
 
         RoadmapChapter chapter = RoadmapChapter.builder()
             .roadmap(roadmap)
@@ -101,14 +93,12 @@ public class RoadmapService {
         return toChapterResponse(chapter, false);
     }
 
-    // ── Cập nhật chương ─────────────────────────────────────────────────────────
     @Transactional
     public RoadmapChapterResponse updateChapter(Long chapterId, CreateChapterRequest req) {
         RoadmapChapter chapter = chapterRepository.findById(chapterId)
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chương"));
 
-        if (req.getTitle() != null && !req.getTitle().isBlank())
-            chapter.setTitle(req.getTitle());
+        if (req.getTitle() != null && !req.getTitle().isBlank()) chapter.setTitle(req.getTitle());
         if (req.getTeacherNote() != null) chapter.setTeacherNote(req.getTeacherNote());
         if (req.getOrderIndex() != null)  chapter.setOrderIndex(req.getOrderIndex());
 
@@ -116,7 +106,6 @@ public class RoadmapService {
         return toChapterResponse(chapter, false);
     }
 
-    // ── Xóa chương ──────────────────────────────────────────────────────────────
     @Transactional
     public void deleteChapter(Long chapterId) {
         RoadmapChapter chapter = chapterRepository.findById(chapterId)
@@ -124,28 +113,36 @@ public class RoadmapService {
         chapterRepository.delete(chapter);
     }
 
-    // ── Thêm file vào chương ────────────────────────────────────────────────────
     @Transactional
     public RoadmapFileResponse addFile(Long chapterId, AddFileRequest req) {
         RoadmapChapter chapter = chapterRepository.findById(chapterId)
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chương"));
-        Document document = documentRepository.findById(req.getDocumentId())
-            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài liệu"));
 
         int nextOrder = fileRepository.findByChapterIdOrderByOrderIndexAsc(chapterId).size();
 
         RoadmapFile rf = RoadmapFile.builder()
             .chapter(chapter)
-            .document(document)
             .canPreview(req.getCanPreview() != null ? req.getCanPreview() : true)
             .orderIndex(req.getOrderIndex() != null ? req.getOrderIndex() : nextOrder)
             .build();
+
+        // Xử lý Phân loại Video vs Tài liệu
+        if ("VIDEO_LINK".equalsIgnoreCase(req.getItemType())) {
+            rf.setItemType(RoadmapFile.ItemType.VIDEO_LINK);
+            rf.setExternalUrl(req.getExternalUrl());
+            rf.setTitle(req.getTitle());
+        } else {
+            rf.setItemType(RoadmapFile.ItemType.DOCUMENT);
+            Document document = documentRepository.findById(req.getDocumentId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài liệu"));
+            rf.setDocument(document);
+            rf.setTitle(document.getTitle());
+        }
 
         fileRepository.save(rf);
         return toFileResponse(rf);
     }
 
-    // ── Xóa file khỏi chương ────────────────────────────────────────────────────
     @Transactional
     public void removeFile(Long fileId) {
         RoadmapFile rf = fileRepository.findById(fileId)
@@ -153,7 +150,6 @@ public class RoadmapService {
         fileRepository.delete(rf);
     }
 
-    // ── Helpers: convert entity → DTO ────────────────────────────────────────────
     private RoadmapResponse toResponse(Roadmap r) {
         return RoadmapResponse.builder()
             .id(r.getId())
@@ -203,14 +199,16 @@ public class RoadmapService {
     }
 
     private RoadmapFileResponse toFileResponse(RoadmapFile rf) {
+        boolean isVideo = rf.getItemType() == RoadmapFile.ItemType.VIDEO_LINK;
         Document d = rf.getDocument();
+
         return RoadmapFileResponse.builder()
             .id(rf.getId())
             .documentId(d != null ? d.getId() : null)
-                .name(d != null ? d.getTitle() : null)
-            .fileType(d != null ? d.getFileType() : null)
-            .size(d != null ? documentService.toResponse(d).getFileSizeFormatted() : null)
-            .fileUrl(d != null ? "/api/documents/" + d.getId() + "/download" : null)
+            .name(rf.getTitle() != null ? rf.getTitle() : (d != null ? d.getTitle() : null))
+            .fileType(isVideo ? "VIDEO" : (d != null ? d.getFileType() : null)) 
+            .size(isVideo ? null : (d != null ? documentService.toResponse(d).getFileSizeFormatted() : null))
+            .fileUrl(isVideo ? rf.getExternalUrl() : (d != null ? "/api/documents/" + d.getId() + "/download" : null))
             .canPreview(rf.getCanPreview())
             .orderIndex(rf.getOrderIndex())
             .updatedAt(rf.getCreatedAt())

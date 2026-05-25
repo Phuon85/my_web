@@ -12,14 +12,14 @@ import java.util.List;
 
 public interface ForumPostRepository extends JpaRepository<ForumPost, Long> {
 
-    /** Lấy tất cả bài gốc (parent = null), không ẩn, sắp xếp: ghim trước, mới nhất sau */
+     /** Lấy tất cả bài gốc (parent = null), không ẩn, sắp xếp: ghim trước, mới nhất sau */
     @Query("""
         SELECT p FROM ForumPost p
         WHERE p.parent IS NULL
           AND p.isHidden = false
           AND (:subject IS NULL OR p.subject = :subject)
-          AND (:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%',:search,'%'))
-               OR LOWER(p.content) LIKE LOWER(CONCAT('%',:search,'%')))
+          AND (:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR LOWER(p.content) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
         ORDER BY p.isPinned DESC, p.createdAt DESC
         """)
     Page<ForumPost> findThreads(

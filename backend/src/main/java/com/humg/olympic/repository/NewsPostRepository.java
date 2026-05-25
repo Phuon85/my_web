@@ -17,8 +17,8 @@ public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
         SELECT n FROM NewsPost n
         WHERE n.isPublished = true
           AND (:category IS NULL OR n.category = :category)
-          AND (:search IS NULL OR LOWER(n.title)   LIKE LOWER(CONCAT('%',:search,'%'))
-               OR                LOWER(n.summary) LIKE LOWER(CONCAT('%',:search,'%')))
+          AND (:search IS NULL OR LOWER(n.title)   LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR                LOWER(n.summary) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
         ORDER BY n.isFeatured DESC, n.createdAt DESC
         """)
     Page<NewsPost> findPublished(
@@ -30,8 +30,8 @@ public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
     @Query("""
         SELECT n FROM NewsPost n
         WHERE (:category IS NULL OR n.category = :category)
-          AND (:search IS NULL OR LOWER(n.title)   LIKE LOWER(CONCAT('%',:search,'%'))
-               OR                LOWER(n.summary) LIKE LOWER(CONCAT('%',:search,'%')))
+          AND (:search IS NULL OR LOWER(n.title)   LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR                LOWER(n.summary) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
         ORDER BY n.createdAt DESC
         """)
     Page<NewsPost> findAllForAdmin(

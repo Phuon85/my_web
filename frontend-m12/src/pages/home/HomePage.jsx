@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import { Card, Spinner, PageContainer, SectionTitle } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { userAPI, contestAPI } from '../../api/axios';
+import { userAPI, contestAPI, newsAPI  } from '../../api/axios';
 
 const NOTIF_TABS = ['Tất cả', 'Quan trọng', 'Hệ thống'];
 
@@ -18,13 +18,8 @@ export default function HomePage() {
   const [loadingCon,  setLoadingCon]    = useState(true);
   const [notifTab,    setNotifTab]      = useState('Tất cả');
 
-  // Thông báo vẫn dùng mock (chưa có API riêng)
-  const [notifs, setNotifs] = useState([
-    { id:1, type:'important', title:'[GẤP] Thay đổi giờ thi vòng loại Olympic Toán', body:'Cuộc thi vòng loại sẽ được đổi từ 9:00 sang 14:00 ngày 18/02.', time:'Vừa xong', read:false },
-    { id:2, type:'system',    title:'Hệ thống sẽ bảo trì vào 12:00 đêm nay',        body:'Thời gian bảo trì dự kiến 00:00 – 02:00.',                    time:'2 giờ trước', read:false },
-    { id:3, type:'info',      title:'Công bố danh sách đội tuyển chính thức môn Lý', body:'Chúc mừng 15 thí sinh xuất sắc được chọn.',                  time:'1 ngày trước', read:true },
-  ]);
-
+  const [notifs, setNotifs] = useState([]);
+  const [loadingNotif, setLoadingNotif] = useState(true);
   const unread = notifs.filter(n => !n.read).length;
 
   // ── Fetch leaderboard từ API thật ────────────────────────────────────────
@@ -39,7 +34,7 @@ export default function HomePage() {
   // ── Fetch danh sách cuộc thi sắp tới từ API thật ────────────────────────
   useEffect(() => {
     setLoadingCon(true);
-    contestAPI.getAll({ status: 'UPCOMING', size: 3 })
+    contestAPI.getAll({ size: 3 })
       .then(r => {
         const list = Array.isArray(r.data) ? r.data : (r.data?.content || []);
         setContests(list.slice(0, 3));
@@ -47,6 +42,26 @@ export default function HomePage() {
       .catch(() => setContests([]))
       .finally(() => setLoadingCon(false));
   }, []);
+
+  useEffect(() => {
+  setLoadingNotif(true);
+  // Gọi API lấy tin tức mới nhất (ví dụ lấy 5 tin)
+  newsAPI.getAll({ page: 0, size: 5 }) 
+    .then(r => {
+      const list = Array.isArray(r.data) ? r.data : (r.data?.content || []);
+      const mappedNotifs = list.map(news => ({
+        id: news.id,
+        type: news.category === 'Hệ thống' ? 'system' : (news.isFeatured ? 'important' : 'info'),
+        title: news.title,
+        body: news.summary || '',
+        time: news.createdAtFormatted || new Date(news.createdAt).toLocaleDateString(),
+        read: true
+      }));
+      setNotifs(mappedNotifs);
+    })
+    .catch(err => console.error("Lỗi tải tin tức:", err))
+    .finally(() => setLoadingNotif(false));
+}, []);
 
   const markRead = id =>
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -131,30 +146,37 @@ export default function HomePage() {
                 ))}
               </div>
 
-              {filteredNotifs.map((n, i) => (
-                <div key={n.id} onClick={() => markRead(n.id)}
-                  style={{
-                    display:'flex', gap:14, padding:'13px 0',
-                    borderBottom: i < filteredNotifs.length-1 ? '1px solid #f0f4f8' : 'none',
-                    cursor:'pointer',
-                    background: n.read ? 'transparent' : '#fffbf0',
-                    borderRadius:6, paddingLeft: n.read ? 0 : 10,
-                  }}>
-                  <span style={{ fontSize:18, flexShrink:0, marginTop:2 }}>
-                    {n.type==='important' ? '⚠️' : n.type==='system' ? '🔧' : '📢'}
-                  </span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
-                      <p style={{ fontWeight: n.read ? 500 : 700, fontSize:14, color:'#1a202c', margin:0 }}>{n.title}</p>
-                      <span style={{ color:'#a0aec0', fontSize:12, flexShrink:0, marginLeft:12 }}>{n.time}</span>
-                    </div>
-                    <p style={{ color:'#718096', fontSize:13, margin:0, lineHeight:1.5 }}>{n.body}</p>
-                  </div>
+              {/* Thêm cờ loadingNotif vào đây */}
+              {loadingNotif ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+                  <Spinner size={24} />
                 </div>
-              ))}
-
-              {filteredNotifs.length === 0 && (
-                <p style={{ textAlign:'center', color:'#aaa', fontSize:14, padding:'24px 0' }}>Không có thông báo</p>
+              ) : filteredNotifs.length === 0 ? (
+                <p style={{ textAlign:'center', color:'#aaa', fontSize:14, padding:'24px 0' }}>
+                  Không có thông báo
+                </p>
+              ) : (
+                filteredNotifs.map((n, i) => (
+                  <div key={n.id} onClick={() => markRead(n.id)}
+                    style={{
+                      display:'flex', gap:14, padding:'13px 0',
+                      borderBottom: i < filteredNotifs.length-1 ? '1px solid #f0f4f8' : 'none',
+                      cursor:'pointer',
+                      background: n.read ? 'transparent' : '#fffbf0',
+                      borderRadius:6, paddingLeft: n.read ? 0 : 10,
+                    }}>
+                    <span style={{ fontSize:18, flexShrink:0, marginTop:2 }}>
+                      {n.type==='important' ? '⚠️' : n.type==='system' ? '🔧' : '📢'}
+                    </span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
+                        <p style={{ fontWeight: n.read ? 500 : 700, fontSize:14, color:'#1a202c', margin:0 }}>{n.title}</p>
+                        <span style={{ color:'#a0aec0', fontSize:12, flexShrink:0, marginLeft:12 }}>{n.time}</span>
+                      </div>
+                      <p style={{ color:'#718096', fontSize:13, margin:0, lineHeight:1.5 }}>{n.body}</p>
+                    </div>
+                  </div>
+                ))
               )}
             </Card>
           </div>

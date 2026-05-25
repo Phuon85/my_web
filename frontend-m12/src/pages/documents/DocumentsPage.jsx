@@ -8,7 +8,6 @@ const SUBJECTS = ['Tất cả','Toán học','Vật lý','Hóa học','CNTT','Ng
 const FILE_COLOR = { PDF:'#e53e3e', DOCX:'#3b82f6', PPTX:'#f97316', MP4:'#8b5cf6', ZIP:'#6b7280' };
 const FILE_ICON  = { PDF:'📄', DOCX:'📝', PPTX:'📊', MP4:'🎬', ZIP:'📦' };
 
-// ── Upload Modal ─────────────────────────────────────────────────────────────
 function UploadModal({ open, onClose, onDone }) {
   const [title, setTitle]       = useState('');
   const [subject, setSubject]   = useState('');
@@ -138,6 +137,11 @@ export default function DocumentsPage() {
   const [toast,       setToast]       = useState('');
   const [page,        setPage]        = useState(1);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  
+  // THÊM STATE CHO XEM TRƯỚC VÀ TẢI XUỐNG
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [actionLoading, setActionLoading] = useState(''); // 'preview' | 'download' | ''
+
   const PER_PAGE = 12;
 
   const canUpload = ['TEACHER','MANAGER','ADMIN'].includes(user?.role);
@@ -166,12 +170,15 @@ export default function DocumentsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // ── Xóa tài liệu ────────────────────────────────────────────────────────
-  const [confirmDelete, setConfirmDelete] = useState(null); // { id, title }
+  // Dọn dẹp URL rác khỏi bộ nhớ khi đóng Preview
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
-  const handleDelete = async (id, title) => {
-    setConfirmDelete({ id, title });
-  };
+  // ── Xóa tài liệu ────────────────────────────────────────────────────────
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const handleDelete = async (id, title) => { setConfirmDelete({ id, title }); };
 
   const doDelete = async () => {
     if (!confirmDelete) return;
@@ -183,6 +190,54 @@ export default function DocumentsPage() {
       fetchDocs();
     } catch (e) { showToast(e.response?.data?.message || 'Xóa thất bại!'); }
   };
+
+  // ── TÍNH NĂNG MỚI: TẢI XUỐNG QUA API CHUẨN ────────────────────────────────
+  const handleDownload = async (doc) => {
+    try {
+      setActionLoading('download');
+      const res = await documentAPI.download(doc.id);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      
+      const link = document.createElement('a');
+      link.href = url;
+      // Backend thường trả về filename trong header, nhưng để nhanh ta tự tạo tên
+      const fileName = `${doc.title || 'Tai-lieu'}.${doc.fileType?.toLowerCase() || 'pdf'}`;
+      link.setAttribute('download', fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      showToast('Lỗi khi tải file!');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  // ── TÍNH NĂNG MỚI: XEM TRƯỚC TÀI LIỆU ────────────────────────────────────
+  const handlePreview = async (doc) => {
+    // Trình duyệt chỉ nhúng được PDF hoặc Video MP4. 
+    // Các file Word, Excel yêu cầu thư viện bên thứ 3 nên ta báo người dùng tải về.
+    if (doc.fileType !== 'PDF' && doc.fileType !== 'MP4') {
+      showToast('Chỉ hỗ trợ xem trước trực tiếp file PDF và MP4. Vui lòng tải xuống!');
+      return;
+    }
+
+    try {
+      setActionLoading('preview');
+      const res = await documentAPI.download(doc.id);
+      const contentType = doc.fileType === 'PDF' ? 'application/pdf' : 'video/mp4';
+      const fileBlob = new Blob([res.data], { type: contentType });
+      const url = window.URL.createObjectURL(fileBlob);
+      setPreviewUrl(url); // Mở Modal Preview
+    } catch (error) {
+      showToast('Lỗi khi tải bản xem trước!');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
 
   const paged = docs.slice((page-1)*PER_PAGE, page*PER_PAGE);
   const totalPages = Math.ceil(docs.length / PER_PAGE);
@@ -261,14 +316,14 @@ export default function DocumentsPage() {
                       </div>
                     </div>
                     <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                      {/* Download */}
-                      <a href={documentAPI.download(doc.id)}
-                        download
-                        onClick={e => e.stopPropagation()}
-                        style={{ background:'none', border:'none', cursor:'pointer', fontSize:15, color:'#888', padding:4, textDecoration:'none' }}
+                      {/* SỬA LẠI NÚT DOWNLOAD NGOÀI GRID */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
+                        style={{ background:'none', border:'none', cursor:'pointer', fontSize:15, color:'#888', padding:4 }}
                         title="Tải xuống">
                         ⬇
-                      </a>
+                      </button>
+
                       {/* Xóa — chỉ owner hoặc Admin */}
                       {(doc.uploaderId === user?.id || ['ADMIN','MANAGER'].includes(user?.role)) && (
                         <button onClick={e => { e.stopPropagation(); handleDelete(doc.id, doc.title); }}
@@ -320,6 +375,8 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL CHI TIẾT TÀI LIỆU ──────────────────────────────────────── */}
       {selectedDoc && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
           onClick={e => e.target===e.currentTarget && setSelectedDoc(null)}>
@@ -365,16 +422,53 @@ export default function DocumentsPage() {
               ))}
             </div>
 
+            {/* SỬA LẠI CÁC NÚT Ở ĐÂY: Bổ sung nút Xem trước */}
             <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => setSelectedDoc(null)} style={{ flex:1, padding:11, border:'1.5px solid #e0e0e0', borderRadius:8, background:'#fff', fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>Đóng</button>
-              <a
-                href={`http://localhost:8080/api/documents/${selectedDoc.id}/download`}
-                download
-                onClick={() => setSelectedDoc(null)}
-                style={{ flex:2, padding:11, background:'linear-gradient(90deg,#1a3a8f,#1a7a4a)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                ⬇ Tải xuống
-              </a>
+              {/* Chỉ hiện nút xem trước nếu là PDF hoặc MP4 */}
+              {(selectedDoc.fileType === 'PDF' || selectedDoc.fileType === 'MP4') && (
+                <button 
+                  onClick={() => handlePreview(selectedDoc)}
+                  disabled={actionLoading === 'preview'}
+                  style={{ flex:1, padding:11, border:'1.5px solid #1a3a8f', borderRadius:8, background:'#e8f0fe', color:'#1a3a8f', fontSize:14, fontWeight:700, cursor: actionLoading === 'preview' ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
+                  {actionLoading === 'preview' ? '⏳ Đang tải...' : '👁 Xem trước'}
+                </button>
+              )}
+              
+              <button
+                onClick={() => handleDownload(selectedDoc)}
+                disabled={actionLoading === 'download'}
+                style={{ flex:2, padding:11, background:'linear-gradient(90deg,#1a3a8f,#1a7a4a)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor: actionLoading === 'download' ? 'not-allowed' : 'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                {actionLoading === 'download' ? '⏳ Đang xử lý...' : '⬇ Tải xuống'}
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL HIỂN THỊ XEM TRƯỚC (IFRAME) ────────────────────────────── */}
+      {previewUrl && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:4000, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <div style={{ width: '100%', maxWidth: 1000, background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '90vh', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+            
+            {/* Header của Preview Modal */}
+            <div style={{ padding: '12px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>👁</span>
+                <h3 style={{ margin: 0, fontSize: 16, color: '#1a202c' }}>Chế độ xem trước</h3>
+              </div>
+              <button 
+                onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+                style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#aaa', display: 'flex', alignItems: 'center' }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Nội dung Iframe */}
+            <iframe 
+              src={previewUrl} 
+              style={{ width: '100%', flex: 1, border: 'none', background: '#e5e7eb' }} 
+              title="Bản xem trước" 
+            />
           </div>
         </div>
       )}

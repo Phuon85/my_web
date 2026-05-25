@@ -3,6 +3,7 @@ package com.humg.olympic.exception;
 import com.humg.olympic.dto.MessageResponse;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.*;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -38,6 +39,14 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse("Tài khoản đã bị khóa. Vui lòng liên hệ Admin.", false));
     }
 
+    /** Thiếu trong bản gốc — fix AccessDeniedException trả 403 thay vì 500 */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<MessageResponse> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new MessageResponse(ex.getMessage() != null
+                        ? ex.getMessage() : "Bạn không có quyền thực hiện thao tác này", false));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<MessageResponse> handleIllegalArg(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()
@@ -54,6 +63,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<MessageResponse> handleFileSize(MaxUploadSizeExceededException ex) {
         return ResponseEntity.badRequest()
                 .body(new MessageResponse("File quá lớn. Tối đa 50MB.", false));
+    }
+
+    /** RuntimeException: trả 400 thay vì 500 để frontend hiển thị đúng message */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<MessageResponse> handleRuntime(RuntimeException ex) {
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse(ex.getMessage(), false));
     }
 
     @ExceptionHandler(Exception.class)

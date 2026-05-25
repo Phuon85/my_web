@@ -1,44 +1,45 @@
 package com.humg.olympic.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class ForumPostResponse {
 
-    private Long id;
-    private Long parentId;
+    private Long   id;
+    private Long   parentId;
 
-    // Thông tin tác giả
-    private Long authorId;
+    private Long   authorId;
     private String authorName;
     private String authorAvatar;
     private String authorRole;
 
-    // Nội dung bài viết
     private String title;
     private String content;
-    private String subject;
-    private String tags;
 
-    // Trạng thái hiển thị
+    /** category key: math, physics, chem, english, it, general */
+    private String category;
+
+    /** Tags dạng List<String> */
+    private List<String> tags;
+
     private Boolean isPinned;
     private Boolean isHidden;
 
-    // Thống kê tương tác
+    /** Alias: frontend dùng pinned/hidden thay vì isPinned/isHidden */
+    @JsonProperty("pinned")
+    public Boolean getPinned() { return isPinned; }
+
+    @JsonProperty("hidden")
+    public Boolean getHidden() { return isHidden; }
+
     private Integer viewCount;
     private Integer likeCount;
-    private Long commentCount;
+    private Long    commentCount;
     private Boolean likedByMe;
 
-    // Thời gian
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

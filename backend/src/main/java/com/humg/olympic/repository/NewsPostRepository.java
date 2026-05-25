@@ -12,13 +12,13 @@ import java.util.List;
 
 public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
 
-    /** Danh sách tin đã xuất bản */
+    /** Danh sách tin đã xuất bản — có lọc category và search */
     @Query("""
         SELECT n FROM NewsPost n
         WHERE n.isPublished = true
           AND (:category IS NULL OR n.category = :category)
-          AND (:search IS NULL OR LOWER(n.title) LIKE LOWER(CONCAT('%',:search,'%'))
-               OR LOWER(n.summary) LIKE LOWER(CONCAT('%',:search,'%')))
+          AND (:search IS NULL OR LOWER(n.title)   LIKE LOWER(CONCAT('%',:search,'%'))
+               OR                LOWER(n.summary) LIKE LOWER(CONCAT('%',:search,'%')))
         ORDER BY n.isFeatured DESC, n.createdAt DESC
         """)
     Page<NewsPost> findPublished(
@@ -26,11 +26,21 @@ public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
             @Param("search")   String search,
             Pageable pageable);
 
+    /** Admin: tất cả tin kể cả draft, có lọc */
+    @Query("""
+        SELECT n FROM NewsPost n
+        WHERE (:category IS NULL OR n.category = :category)
+          AND (:search IS NULL OR LOWER(n.title)   LIKE LOWER(CONCAT('%',:search,'%'))
+               OR                LOWER(n.summary) LIKE LOWER(CONCAT('%',:search,'%')))
+        ORDER BY n.createdAt DESC
+        """)
+    Page<NewsPost> findAllForAdmin(
+            @Param("category") String category,
+            @Param("search")   String search,
+            Pageable pageable);
+
     /** Tin nổi bật (tối đa 5) */
     List<NewsPost> findTop5ByIsPublishedTrueAndIsFeaturedTrueOrderByCreatedAtDesc();
-
-    /** Admin — tất cả tin kể cả draft */
-    Page<NewsPost> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     @Modifying
     @Query("UPDATE NewsPost n SET n.viewCount = n.viewCount + 1 WHERE n.id = :id")

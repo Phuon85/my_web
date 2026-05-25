@@ -30,11 +30,16 @@ public class NewsController {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
     }
 
-    /**
-     * GET /api/news
-     * Danh sách tin đã xuất bản (phân trang)
-     * Params: category, search, page, size
-     */
+    private UserHumg meOrNull() {
+        try {
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()
+                    || "anonymousUser".equals(auth.getPrincipal())) return null;
+            return me();
+        } catch (Exception e) { return null; }
+    }
+
+    /** GET /api/news — danh sách đã xuất bản */
     @GetMapping
     public ResponseEntity<Page<NewsPostResponse>> getPublished(
             @RequestParam(required = false)    String category,
@@ -44,40 +49,30 @@ public class NewsController {
         return ResponseEntity.ok(newsService.getPublished(category, search, page, size));
     }
 
-    /**
-     * GET /api/news/featured
-     * Tin nổi bật (dùng cho widget trang chủ)
-     */
+    /** GET /api/news/featured — tin nổi bật */
     @GetMapping("/featured")
     public ResponseEntity<List<NewsPostResponse>> getFeatured() {
         return ResponseEntity.ok(newsService.getFeatured());
     }
 
-    /**
-     * GET /api/news/{id}
-     * Chi tiết 1 bài tin (tăng lượt xem)
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<NewsPostResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(newsService.getById(id));
-    }
-
-    /**
-     * GET /api/news/admin/all
-     * Admin: xem tất cả kể cả draft
-     */
+    /** GET /api/news/admin/all — admin xem tất cả kể cả draft */
     @GetMapping("/admin/all")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','MANAGER')")
     public ResponseEntity<Page<NewsPostResponse>> adminGetAll(
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(newsService.adminGetAll(page, size));
+            @RequestParam(required = false)    String category,
+            @RequestParam(required = false)    String search,
+            @RequestParam(defaultValue = "0")  int    page,
+            @RequestParam(defaultValue = "20") int    size) {
+        return ResponseEntity.ok(newsService.adminGetAll(category, search, page, size));
     }
 
-    /**
-     * POST /api/news
-     * Tạo bài tin mới (Teacher/Admin)
-     */
+    /** GET /api/news/{id} — chi tiết (admin thấy cả draft) */
+    @GetMapping("/{id}")
+    public ResponseEntity<NewsPostResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(newsService.getById(id, meOrNull()));
+    }
+
+    /** POST /api/news — tạo bài tin */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','MANAGER')")
     public ResponseEntity<NewsPostResponse> create(
@@ -85,10 +80,7 @@ public class NewsController {
         return ResponseEntity.ok(newsService.create(req, me()));
     }
 
-    /**
-     * PUT /api/news/{id}
-     * Sửa bài tin
-     */
+    /** PUT /api/news/{id} — sửa bài tin */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','MANAGER')")
     public ResponseEntity<NewsPostResponse> update(
@@ -97,30 +89,21 @@ public class NewsController {
         return ResponseEntity.ok(newsService.update(id, req, me()));
     }
 
-    /**
-     * PATCH /api/news/{id}/publish
-     * Xuất bản / Thu hồi
-     */
+    /** PATCH /api/news/{id}/publish — xuất bản / thu hồi */
     @PatchMapping("/{id}/publish")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','MANAGER')")
     public ResponseEntity<NewsPostResponse> togglePublish(@PathVariable Long id) {
         return ResponseEntity.ok(newsService.togglePublish(id, me()));
     }
 
-    /**
-     * PATCH /api/news/{id}/feature
-     * Đặt / Bỏ nổi bật
-     */
+    /** PATCH /api/news/{id}/feature — nổi bật / bỏ nổi bật */
     @PatchMapping("/{id}/feature")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     public ResponseEntity<NewsPostResponse> toggleFeatured(@PathVariable Long id) {
         return ResponseEntity.ok(newsService.toggleFeatured(id, me()));
     }
 
-    /**
-     * DELETE /api/news/{id}
-     * Xóa bài tin
-     */
+    /** DELETE /api/news/{id} — xóa bài tin */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     public ResponseEntity<MessageResponse> delete(@PathVariable Long id) {

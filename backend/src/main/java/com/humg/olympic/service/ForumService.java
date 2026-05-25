@@ -14,7 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,53 +25,102 @@ public class ForumService {
     private final ForumLikeRepository likeRepo;
     private final UserRepository      userRepo;
 
-    // ── Lấy danh sách bài gốc (phân trang) ───────────────────────────────
-    @Transactional(readOnly = true)
-    public Page<ForumPostResponse> getThreads(String subject, String search,
-                                               int page, int size,
-                                               UserHumg me) {
-        String subjectParam = (subject == null || subject.isBlank() || subject.equals("Tất cả"))
-                ? null : subject;
-        String searchParam  = (search  == null || search.isBlank())  ? null : search;
+    // ── Bảng chuyển đổi category key ↔ subject label ────────────────────
+    private static final Map<String,String> CAT_TO_SUBJECT = Map.of(
+        "math",    "Toán học",
+        "physics", "Vật lý",
+        "chem",    "Hóa học",
+        "english", "Ngoại ngữ",
+        "it",      "CNTT",
+        "general", "Chung"
+    );
+    private static final Map<String,String> SUBJECT_TO_CAT;
+    static {
+        SUBJECT_TO_CAT = new HashMap<>();
+        CAT_TO_SUBJECT.forEach((k, v) -> SUBJECT_TO_CAT.put(v, k));
+    }
 
-        Pageable pageable = PageRequest.of(page, size);
+    private String categoryToSubject(String category) {
+        if (category == null || category.isBlank()) return "Chung";
+        // Đã là subject label (tiếng Việt) thì giữ nguyên
+        if (SUBJECT_TO_CAT.containsKey(category)) return category;
+        return CAT_TO_SUBJECT.getOrDefault(category.toLowerCase(), "Chung");
+    }
+
+    private String subjectToCategory(String subject) {
+        if (subject == null) return "general";
+        return SUBJECT_TO_CAT.getOrDefault(subject, "general");
+    }
+
+    private String joinTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) return null;
+        return tags.stream().map(String::trim).filter(t -> !t.isBlank())
+                   .collect(Collectors.joining(","));
+    }
+
+    private List<String> splitTags(String tags) {
+        if (tags == null || tags.isBlank()) return Collections.emptyList();
+        return Arrays.stream(tags.split(","))
+                     .map(String::trim).filter(t -> !t.isBlank())
+                     .collect(Collectors.toList());
+    }
+
+    private boolean isMod(UserHumg me) {
+        String r = me.getRole();
+        return "ADMIN".equals(r) || "MANAGER".equals(r) || "TEACHER".equals(r);
+    }
+
+    // ── Danh sách bài gốc (phân trang) ──────────────────────────────────
+    @Transactional(readOnly = true)
+    public Page<ForumPostResponse> getThreads(String category, String sort,
+                                               String search, int page, int size,
+                                               UserHumg me) {
+        // Chuyển category key → subject label để query
+        String subjectParam = (category == null || category.isBlank() || "all".equals(category))
+                ? null : categoryToSubject(category);
+        String searchParam  = (search  == null || search.isBlank()) ? null : search;
+
+        // Sort: popular → likeCount DESC; default → isPinned DESC, createdAt DESC
+        Pageable pageable = "popular".equals(sort)
+                ? PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "likeCount", "createdAt"))
+                : PageRequest.of(page, size);
+
         Page<ForumPost> raw = postRepo.findThreads(subjectParam, searchParam, pageable);
+
+        // unanswered: lọc sau query (chấp nhận N+1 nhỏ vì size nhỏ)
+        if ("unanswered".equals(sort)) {
+            List<ForumPostResponse> filtered = raw.getContent().stream()
+                    .filter(p -> postRepo.countComments(p.getId()) == 0)
+                    .map(p -> toResponse(p, me, true))
+                    .collect(Collectors.toList());
+            return new PageImpl<>(filtered, pageable, filtered.size());
+        }
 
         return raw.map(p -> toResponse(p, me, true));
     }
 
-    // ── Lấy chi tiết 1 bài gốc + danh sách bình luận ────────────────────
+    // ── Chi tiết bài gốc ────────────────────────────────────────────────
     @Transactional
     public ForumPostResponse getThread(Long id, UserHumg me) {
         ForumPost post = postRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết"));
-        if (post.getIsHidden()) throw new RuntimeException("Bài viết đã bị ẩn");
+        if (Boolean.TRUE.equals(post.getIsHidden()))
+            throw new RuntimeException("Bài viết đã bị ẩn");
 
         postRepo.incrementView(id);
         post.setViewCount(post.getViewCount() + 1);
-
-        ForumPostResponse resp = toResponse(post, me, true);
-
-        // Comments
-        List<ForumPostResponse> comments = postRepo.findComments(id)
-                .stream()
-                .map(c -> toResponse(c, me, false))
-                .collect(Collectors.toList());
-        // Gắn comments vào field tạm — trả riêng
-        // (trả về cả 2 qua wrapper nếu cần; ở đây trả post có commentCount)
-        return resp;
+        return toResponse(post, me, true);
     }
 
-    // ── Lấy bình luận của 1 bài gốc ─────────────────────────────────────
+    // ── Bình luận của bài gốc ────────────────────────────────────────────
     @Transactional(readOnly = true)
     public List<ForumPostResponse> getComments(Long parentId, UserHumg me) {
-        return postRepo.findComments(parentId)
-                .stream()
+        return postRepo.findComments(parentId).stream()
                 .map(c -> toResponse(c, me, false))
                 .collect(Collectors.toList());
     }
 
-    // ── Tạo bài mới hoặc bình luận ───────────────────────────────────────
+    // ── Tạo bài / bình luận ─────────────────────────────────────────────
     @Transactional
     public ForumPostResponse create(CreateForumPostRequest req, UserHumg author) {
         ForumPost parent = null;
@@ -79,10 +128,16 @@ public class ForumService {
             parent = postRepo.findById(req.getParentId())
                     .orElseThrow(() -> new RuntimeException("Bài gốc không tồn tại"));
         }
-
-        // Bài gốc phải có tiêu đề
         if (parent == null && (req.getTitle() == null || req.getTitle().isBlank())) {
             throw new RuntimeException("Tiêu đề không được bỏ trống");
+        }
+
+        // Ưu tiên category key, fallback subject label
+        String subject = "Chung";
+        if (req.getCategory() != null && !req.getCategory().isBlank()) {
+            subject = categoryToSubject(req.getCategory());
+        } else if (req.getSubject() != null && !req.getSubject().isBlank()) {
+            subject = req.getSubject();
         }
 
         ForumPost post = ForumPost.builder()
@@ -90,27 +145,27 @@ public class ForumService {
                 .author(author)
                 .title(req.getTitle())
                 .content(req.getContent())
-                .subject(req.getSubject() != null ? req.getSubject() : "Chung")
-                .tags(req.getTags())
+                .subject(subject)
+                .tags(joinTags(req.getTags()))
                 .build();
 
         return toResponse(postRepo.save(post), author, true);
     }
 
-    // ── Chỉnh sửa bài ───────────────────────────────────────────────────
+    // ── Sửa bài ─────────────────────────────────────────────────────────
     @Transactional
     public ForumPostResponse update(Long id, CreateForumPostRequest req, UserHumg me) {
         ForumPost post = postRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết"));
 
-        boolean isOwner = post.getAuthor().getId().equals(me.getId());
-        boolean isAdmin  = me.getRole().equals("ADMIN") || me.getRole().equals("TEACHER");
-        if (!isOwner && !isAdmin) throw new AccessDeniedException("Không có quyền chỉnh sửa");
+        if (!post.getAuthor().getId().equals(me.getId()) && !isMod(me))
+            throw new AccessDeniedException("Không có quyền chỉnh sửa");
 
-        if (req.getTitle()   != null) post.setTitle(req.getTitle());
-        if (req.getContent() != null) post.setContent(req.getContent());
-        if (req.getSubject() != null) post.setSubject(req.getSubject());
-        if (req.getTags()    != null) post.setTags(req.getTags());
+        if (req.getTitle()    != null) post.setTitle(req.getTitle());
+        if (req.getContent()  != null) post.setContent(req.getContent());
+        if (req.getCategory() != null) post.setSubject(categoryToSubject(req.getCategory()));
+        else if (req.getSubject() != null) post.setSubject(req.getSubject());
+        if (req.getTags()     != null) post.setTags(joinTags(req.getTags()));
 
         return toResponse(postRepo.save(post), me, true);
     }
@@ -120,37 +175,28 @@ public class ForumService {
     public void delete(Long id, UserHumg me) {
         ForumPost post = postRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết"));
-
-        boolean isOwner = post.getAuthor().getId().equals(me.getId());
-        boolean isAdmin  = me.getRole().equals("ADMIN") || me.getRole().equals("TEACHER");
-        if (!isOwner && !isAdmin) throw new AccessDeniedException("Không có quyền xóa");
-
+        if (!post.getAuthor().getId().equals(me.getId()) && !isMod(me))
+            throw new AccessDeniedException("Không có quyền xóa");
         postRepo.delete(post);
     }
 
-    // ── Ghim / Bỏ ghim (Teacher, Admin) ─────────────────────────────────
+    // ── Ghim / Bỏ ghim ──────────────────────────────────────────────────
     @Transactional
     public ForumPostResponse togglePin(Long id, UserHumg me) {
-        if (!me.getRole().equals("TEACHER") && !me.getRole().equals("ADMIN")
-                && !me.getRole().equals("MANAGER")) {
-            throw new AccessDeniedException("Chỉ giảng viên hoặc admin mới có thể ghim");
-        }
+        if (!isMod(me)) throw new AccessDeniedException("Chỉ giảng viên hoặc admin mới có thể ghim");
         ForumPost post = postRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết"));
-        post.setIsPinned(!post.getIsPinned());
+        post.setIsPinned(!Boolean.TRUE.equals(post.getIsPinned()));
         return toResponse(postRepo.save(post), me, true);
     }
 
-    // ── Ẩn / Hiện bài (Teacher, Admin) ───────────────────────────────────
+    // ── Ẩn / Hiện ───────────────────────────────────────────────────────
     @Transactional
     public ForumPostResponse toggleHide(Long id, UserHumg me) {
-        if (!me.getRole().equals("TEACHER") && !me.getRole().equals("ADMIN")
-                && !me.getRole().equals("MANAGER")) {
-            throw new AccessDeniedException("Không có quyền");
-        }
+        if (!isMod(me)) throw new AccessDeniedException("Không có quyền");
         ForumPost post = postRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết"));
-        post.setIsHidden(!post.getIsHidden());
+        post.setIsHidden(!Boolean.TRUE.equals(post.getIsHidden()));
         return toResponse(postRepo.save(post), me, true);
     }
 
@@ -168,8 +214,8 @@ public class ForumService {
             likeRepo.save(ForumLike.builder().post(post).user(me).build());
             post.setLikeCount(post.getLikeCount() + 1);
         }
-
         postRepo.save(post);
+
         ForumPostResponse resp = toResponse(post, me, true);
         resp.setLikedByMe(!alreadyLiked);
         return resp;
@@ -177,8 +223,8 @@ public class ForumService {
 
     // ── Map entity → DTO ─────────────────────────────────────────────────
     private ForumPostResponse toResponse(ForumPost p, UserHumg me, boolean countComments) {
-        boolean liked = me != null && likeRepo.existsByPostAndUser(p, me);
-        long comments  = countComments ? postRepo.countComments(p.getId()) : 0;
+        boolean liked    = me != null && likeRepo.existsByPostAndUser(p, me);
+        long    comments = countComments ? postRepo.countComments(p.getId()) : 0;
 
         return ForumPostResponse.builder()
                 .id(p.getId())
@@ -189,8 +235,8 @@ public class ForumService {
                 .authorRole(p.getAuthor().getRole())
                 .title(p.getTitle())
                 .content(p.getContent())
-                .subject(p.getSubject())
-                .tags(p.getTags())
+                .category(subjectToCategory(p.getSubject()))
+                .tags(splitTags(p.getTags()))
                 .isPinned(p.getIsPinned())
                 .isHidden(p.getIsHidden())
                 .viewCount(p.getViewCount())

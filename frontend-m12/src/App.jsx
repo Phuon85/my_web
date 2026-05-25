@@ -1,13 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-
-// NẾU BẠN DÙNG THƯ VIỆN REACT-TOASTIFY, HÃY MỞ 2 DÒNG DƯỚI ĐÂY VÀ XÓA import từ './components/ui'
-// import { ToastContainer } from 'react-toastify';
-// import 'react-toastify/dist/ReactToastify.css';
-
-// Tạm ẩn ToastContainer từ UI vì hệ thống báo không tìm thấy
-// import { ToastContainer } from './components/ui';
 
 import LoginPage from './pages/auth/LoginPage';
 import { RegisterSelectionPage, RegisterInternalPage, RegisterExternalPage } from './pages/auth/RegisterPages';
@@ -22,19 +16,10 @@ import AdminOverviewPage from './pages/admin/AdminOverviewPage';
 import AdminUsersPage    from './pages/admin/AdminUsersPage';
 import AdminExamsPage    from './pages/admin/AdminExamsPage';
 import AdminLogsPage     from './pages/admin/AdminLogsPage';
-
-// ── Forum ───────────────────────────────────────────────────────
-import ForumPage       from './pages/forum/ForumPage';
-import ForumDetailPage from './pages/forum/ForumDetailPage';
-
-// ── News ────────────────────────────────────────────────────────
-import NewsPage       from './pages/news/NewsPage';
-import NewsDetailPage from './pages/news/NewsDetailPage';
-
-// ── Misc ────────────────────────────────────────────────────────
-// Tạm ẩn 2 trang này vì bạn chưa tạo file trong thư mục src/pages/misc/
-// import NotificationsPage  from './pages/misc/NotificationsPage';
-// import ChangePasswordPage from './pages/misc/ChangePasswordPage';
+import ForumPage         from './pages/forum/ForumPage';
+import ForumDetailPage   from './pages/forum/ForumDetailPage';
+import NewsPage          from './pages/news/NewsPage';
+import NewsDetailPage    from './pages/news/NewsDetailPage';
 
 function LoadingScreen() {
   return (
@@ -68,41 +53,28 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Auth */}
       <Route path="/login"             element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register"          element={<PublicRoute><RegisterSelectionPage /></PublicRoute>} />
       <Route path="/register/internal" element={<PublicRoute><RegisterInternalPage /></PublicRoute>} />
       <Route path="/register/external" element={<PublicRoute><RegisterExternalPage /></PublicRoute>} />
 
-      {/* Main */}
       <Route path="/home"    element={<PrivateRoute><HomePage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
 
-      {/* Contest */}
       <Route path="/contests"     element={<PrivateRoute><ContestListPage /></PrivateRoute>} />
       <Route path="/contests/:id" element={<PrivateRoute><ContestDetailPage /></PrivateRoute>} />
 
-      {/* Documents */}
       <Route path="/documents" element={<PrivateRoute><DocumentsPage /></PrivateRoute>} />
 
-      {/* Roadmap */}
       <Route path="/roadmap" element={<PrivateRoute><RoadmapPage /></PrivateRoute>} />
       <Route path="/roadmap/chapter/:chapterId/lesson/:lessonId" element={<PrivateRoute><LessonPage /></PrivateRoute>} />
 
-      {/* Forum */}
       <Route path="/forum"     element={<PrivateRoute><ForumPage /></PrivateRoute>} />
       <Route path="/forum/:id" element={<PrivateRoute><ForumDetailPage /></PrivateRoute>} />
 
-      {/* News */}
       <Route path="/news"     element={<PrivateRoute><NewsPage /></PrivateRoute>} />
       <Route path="/news/:id" element={<PrivateRoute><NewsDetailPage /></PrivateRoute>} />
 
-      {/* Misc */}
-      {/* Tạm ẩn Route của 2 trang chưa có */}
-      {/* <Route path="/notifications"   element={<PrivateRoute><NotificationsPage /></PrivateRoute>} /> */}
-      {/* <Route path="/change-password" element={<PrivateRoute><ChangePasswordPage /></PrivateRoute>} /> */}
-
-      {/* Admin */}
       <Route path="/admin"       element={<AdminRoute><AdminOverviewPage /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
       <Route path="/admin/exams" element={<AdminRoute><AdminExamsPage /></AdminRoute>} />
@@ -117,8 +89,21 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        {/* Tạm ẩn ToastContainer */}
-        {/* <ToastContainer /> */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              fontFamily: "'Be Vietnam Pro', sans-serif",
+              fontSize: 14,
+              fontWeight: 500,
+              borderRadius: 10,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            },
+            success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
+            error:   { iconTheme: { primary: '#e53e3e', secondary: '#fff' } },
+          }}
+        />
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

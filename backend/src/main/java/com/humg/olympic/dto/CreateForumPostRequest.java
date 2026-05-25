@@ -1,31 +1,28 @@
 package com.humg.olympic.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import java.util.List;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class CreateForumPostRequest {
 
-    // Truyền ID của bài viết gốc nếu đây là bình luận.
-    // Nếu tạo bài viết mới tinh thì để null.
+    /** null = bài gốc, non-null = bình luận hoặc reply */
     private Long parentId;
 
-    // Tiêu đề: Bắt buộc với bài gốc, nhưng bình luận thì có thể không cần
+    /** Tiêu đề — bắt buộc với bài gốc */
+    @Size(max = 300)
     private String title;
 
     @NotBlank(message = "Nội dung bài viết không được để trống")
     private String content;
 
-    // Môn học (Toán, Lý, Hóa, CNTT, Ngoại ngữ, Chung)
-    // Backend sẽ tự set mặc định là "Chung" nếu người dùng không chọn
+    /** Category key: math, physics, chem, english, it, general */
+    private String category;
+
+    /** subject label (tương thích ngược) */
     private String subject;
 
-    // Tag tự do: VD: "Đại số", "Giải tích"...
-    private String tags;
+    /** Tags dạng List từ frontend */
+    private List<String> tags;
 }

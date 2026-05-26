@@ -23,7 +23,8 @@ export default function RoadmapPage() {
   const [error,     setError]     = useState('');
 
   // ── STATES CHO CÁC MODAL QUẢN LÝ ──
-  const [showCreateRoadmap, setShowCreateRoadmap] = useState(false);
+  // Sửa từ showCreateRoadmap thành roadmapModalMode: null (đóng), 'create' (tạo), 'edit' (sửa)
+  const [roadmapModalMode, setRoadmapModalMode] = useState(null); 
   const [roadmapForm, setRoadmapForm] = useState({ title: '', description: '', subject: 'Toán học' });
 
   const [showAddChapter, setShowAddChapter] = useState(false);
@@ -33,13 +34,19 @@ export default function RoadmapPage() {
   const [fileForm, setFileForm] = useState({ itemType: 'VIDEO_LINK', title: '', externalUrl: '', documentId: '' });
 
   // ── FETCH DATA ──
-  const fetchRoadmaps = () => {
+  const fetchRoadmaps = (selectId = null) => {
     setLoading(true);
     roadmapAPI.getAll()
       .then(r => {
         const list = Array.isArray(r.data) ? r.data : (r.data?.content || []);
         setRoadmaps(list);
-        if (list.length > 0 && !selected) setSelected(list[0]);
+        if (list.length > 0) {
+          // Nếu có truyền selectId (vừa update xong) thì chọn nó, ngược lại chọn phần tử đầu tiên
+          const toSelect = selectId ? list.find(item => item.id === selectId) : list[0];
+          setSelected(toSelect || list[0]);
+        } else {
+          setSelected(null);
+        }
       })
       .catch(() => setError('Không thể tải lộ trình. Vui lòng thử lại.'))
       .finally(() => setLoading(false));
@@ -66,14 +73,40 @@ export default function RoadmapPage() {
   };
 
   // ── CÁC HÀM XỬ LÝ LƯU (DÀNH CHO GIẢNG VIÊN) ──
-  const handleCreateRoadmap = async () => {
+  // Hàm gộp chung xử lý Tạo mới & Cập nhật Lộ trình
+  const handleSaveRoadmap = async () => {
     if (!roadmapForm.title) return alert("Vui lòng nhập tên lộ trình!");
     try {
-      await roadmapAPI.create(roadmapForm);
-      setShowCreateRoadmap(false);
+      if (roadmapModalMode === 'create') {
+        await roadmapAPI.create(roadmapForm);
+        alert("Tạo lộ trình thành công!");
+        fetchRoadmaps(); 
+      } else if (roadmapModalMode === 'edit') {
+        // Giả sử API update của bạn là roadmapAPI.update(id, data)
+        await roadmapAPI.update(selected.id, roadmapForm);
+        alert("Cập nhật lộ trình thành công!");
+        fetchRoadmaps(selected.id); // Tải lại danh sách và giữ nguyên lộ trình đang sửa
+      }
+      setRoadmapModalMode(null);
       setRoadmapForm({ title: '', description: '', subject: 'Toán học' });
-      fetchRoadmaps(); 
-    } catch (e) { alert("Lỗi khi tạo lộ trình"); }
+    } catch (e) { 
+      alert(roadmapModalMode === 'create' ? "Lỗi khi tạo lộ trình" : "Lỗi khi cập nhật lộ trình"); 
+    }
+  };
+
+  // Hàm xử lý Xóa Lộ trình (Đã bổ sung hoàn chỉnh)
+  const handleDeleteRoadmap = async () => {
+    if (!selected) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa lộ trình "${selected.title}" không? Hành động này không thể hoàn tác!`)) return;
+    
+    try {
+      // Giả sử API delete của bạn là roadmapAPI.delete(id)
+      await roadmapAPI.delete(selected.id);
+      alert("Xóa lộ trình thành công!");
+      fetchRoadmaps(); // Tải lại danh sách sau khi xóa
+    } catch (e) {
+      alert("Lỗi khi xóa lộ trình hoặc phương thức xóa chưa được hỗ trợ từ API.");
+    }
   };
 
   const handleAddChapter = async () => {
@@ -138,10 +171,29 @@ export default function RoadmapPage() {
           </div>
         )}
 
-        {/* HEADER & BUTTONS */}
+        {/* Tiêu đề & Sửa/Xóa Lộ trình */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h1 style={{ fontSize:22, fontWeight:800, color:'#1a202c', margin:0, display:'flex', alignItems:'center', gap:10 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a202c', margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             🎓 {selected?.title || 'Lộ trình học tập'}
+            
+            {/* NÚT CHỈNH SỬA / XÓA LỘ TRÌNH - HIỆN KHI LÀ QUẢN LÝ */}
+            {canManage && selected && (
+              <div style={{ display: 'flex', gap: 8, marginLeft: 10 }}>
+                <button 
+                  onClick={() => { 
+                    setRoadmapForm({ title: selected.title, description: selected.description || '', subject: selected.subject || 'Toán học' }); 
+                    setRoadmapModalMode('edit'); // Sửa thành setRoadmapModalMode
+                  }} 
+                  title="Sửa lộ trình" 
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}
+                >✏️</button>
+                <button 
+                  onClick={handleDeleteRoadmap} 
+                  title="Xóa lộ trình" 
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}
+                >🗑️</button>
+              </div>
+            )}
           </h1>
           
           {canManage && (
@@ -152,7 +204,7 @@ export default function RoadmapPage() {
                   + Thêm Chương
                 </button>
               )}
-              <button onClick={() => setShowCreateRoadmap(true)}
+              <button onClick={() => setRoadmapModalMode('create')}
                 style={{ padding:'8px 16px', background:'linear-gradient(90deg,#1a3a8f,#1a7a4a)', color:'#fff', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer' }}>
                 + Tạo Lộ trình
               </button>
@@ -283,11 +335,13 @@ export default function RoadmapPage() {
         </div>
       </div>
 
-      {/* ── MODAL 1: TẠO LỘ TRÌNH ── */}
-      {showCreateRoadmap && (
+      {/* ── MODAL 1: TẠO / SỬA LỘ TRÌNH ── */}
+      {roadmapModalMode && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center' }}>
           <div style={{ background:'#fff', width:500, padding:24, borderRadius:12 }}>
-            <h2 style={{ marginTop:0, color:'#1a202c' }}>Tạo Lộ trình mới</h2>
+            <h2 style={{ marginTop:0, color:'#1a202c' }}>
+              {roadmapModalMode === 'create' ? 'Tạo Lộ trình mới' : 'Chỉnh sửa Lộ trình'}
+            </h2>
             
             <label style={{ display:'block', marginBottom:8, fontWeight:600 }}>Tên lộ trình *</label>
             <input value={roadmapForm.title} onChange={e=>setRoadmapForm({...roadmapForm, title: e.target.value})} placeholder="VD: Lộ trình Olympic Đại số" style={{ width:'100%', padding:10, marginBottom:16, borderRadius:6, border:'1px solid #ccc', boxSizing:'border-box' }} />
@@ -299,8 +353,13 @@ export default function RoadmapPage() {
             <textarea rows={3} value={roadmapForm.description} onChange={e=>setRoadmapForm({...roadmapForm, description: e.target.value})} placeholder="Mô tả ngắn gọn về lộ trình..." style={{ width:'100%', padding:10, marginBottom:24, borderRadius:6, border:'1px solid #ccc', boxSizing:'border-box' }} />
 
             <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-              <button onClick={() => setShowCreateRoadmap(false)} style={{ padding:'8px 16px', borderRadius:6, border:'1px solid #ccc', cursor:'pointer' }}>Hủy</button>
-              <button onClick={handleCreateRoadmap} style={{ padding:'8px 16px', background:'#1a3a8f', color:'#fff', border:'none', borderRadius:6, cursor:'pointer' }}>Tạo lộ trình</button>
+              <button onClick={() => {
+                setRoadmapModalMode(null);
+                setRoadmapForm({ title: '', description: '', subject: 'Toán học' });
+              }} style={{ padding:'8px 16px', borderRadius:6, border:'1px solid #ccc', cursor:'pointer' }}>Hủy</button>
+              <button onClick={handleSaveRoadmap} style={{ padding:'8px 16px', background:'#1a3a8f', color:'#fff', border:'none', borderRadius:6, cursor:'pointer' }}>
+                {roadmapModalMode === 'create' ? 'Tạo lộ trình' : 'Lưu thay đổi'}
+              </button>
             </div>
           </div>
         </div>

@@ -212,7 +212,7 @@ export default function ContestListPage() {
 
         <div style={{ borderTop:'1px solid #e8ecf0', marginTop:48, padding:'20px 0', display:'flex', justifyContent:'space-between' }}>
           <span style={{ fontSize:13, color:'#888' }}>🏆 HUMG Olympic Platform</span>
-          <span style={{ fontSize:12, color:'#aaa' }}>© 2025 Đại học Mỏ – Địa chất Hà Nội</span>
+          <span style={{ fontSize:12, color:'#aaa' }}>© 2026 Đại học Mỏ – Địa chất Hà Nội</span>
         </div>
       </PageContainer>
     </div>

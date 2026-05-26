@@ -85,14 +85,15 @@ export const roadmapAPI = {
   getById:  id           => api.get(`/roadmaps/${id}`),
   create:   data         => api.post('/roadmaps', data),
   update:   (id, data)   => api.put(`/roadmaps/${id}`, data),
-  delete:   id           => api.delete(`/roadmaps/${id}`),
+  delete: (id) => api.delete(`/roadmaps/${id}`),
+  deleteChapter: (chapterId) => api.delete(`/roadmaps/chapters/${chapterId}`),
+  removeFile: (fileId) => api.delete(`/roadmaps/files/${fileId}`),
   // Chapters
   addChapter:    (roadmapId, data) => api.post(`/roadmaps/${roadmapId}/chapters`, data),
   updateChapter: (chapterId, data) => api.put(`/roadmaps/chapters/${chapterId}`, data),
   deleteChapter: id                => api.delete(`/roadmaps/chapters/${id}`),
   // Files
   addFile:    (chapterId, data) => api.post(`/roadmaps/chapters/${chapterId}/files`, data),
-  removeFile: id                => api.delete(`/roadmaps/files/${id}`),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

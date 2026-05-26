@@ -43,7 +43,7 @@ export default function Navbar({ unreadCount = 0 }) {
       <div onClick={() => navigate('/home')}
         style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 24, cursor: 'pointer', flexShrink: 0 }}>
         <img 
-          src="./humg_logo.png" 
+          src="/humg_logo.png" 
           alt="HUMG Olympic Logo" 
           style={{ width: 42, height: 42, objectFit: 'contain' }} 
         />

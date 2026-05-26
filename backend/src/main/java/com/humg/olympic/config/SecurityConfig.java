@@ -33,7 +33,6 @@ public class SecurityConfig {
         // Tài liệu — xem danh sách & chi tiết công khai
         "/api/documents",
         "/api/documents/{id}",
-        // Download cần đăng nhập — KHÔNG để public
         // Lộ trình — xem công khai
         "/api/roadmaps",
         "/api/roadmaps/{id}",
@@ -42,13 +41,16 @@ public class SecurityConfig {
         // Cuộc thi công khai
         "/api/contests",
         "/api/contests/*/results",
+        // Bài tập — danh sách public (filter trong service)
+        "/api/exercises",
+        "/api/exercises/{id}",
         // Static files (file upload)
         "/uploads/**",
         // Swagger
         "/swagger-ui/**",
         "/v3/api-docs/**",
-            "/favicon.ico",
-            "/error",
+        "/favicon.ico",
+        "/error",
     };
 
     @Bean

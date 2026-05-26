@@ -47,16 +47,39 @@ export default function ContestListPage() {
       subject:  subject !== 'Tất cả môn' ? subject : undefined,
       status:   filter === 'Đang diễn ra' ? 'LIVE'
               : filter === 'Sắp diễn ra'  ? 'PUBLISHED'
-              : filter === 'Lịch sử'       ? 'ENDED'
+              : filter === 'Lịch sử'      ? 'ENDED'
               : undefined,
     };
     contestAPI.getAll(params)
       .then(r => {
         const list = Array.isArray(r.data) ? r.data : (r.data?.content || []);
-        setContests(list);
-        // Featured = cuộc thi PUBLISHED có nhiều người đăng ký nhất
-        const feat = list.find(c => c.isPublished && c.status !== 'ENDED' && c.status !== 'DRAFT');
-        setFeatured(feat || list[0] || null);
+        const now = Date.now();
+
+        // TỰ ĐỘNG TÍNH TOÁN LẠI STATUS NGAY TẠI FRONTEND
+        const updatedList = list.map(c => {
+          const start = c.startTime ? new Date(c.startTime).getTime() : null;
+          const end = c.endTime ? new Date(c.endTime).getTime() : null;
+
+          // Nếu không có endTime, tự tính: endTime = startTime + số phút thi
+          let calcEnd = end;
+          if (!calcEnd && start && c.durationMinutes) {
+            calcEnd = start + (c.durationMinutes * 60000);
+          }
+
+          let newStatus = c.status;
+          // Chỉ can thiệp nếu cuộc thi không phải bản Nháp hoặc Đã xóa
+          if (newStatus !== 'DRAFT' && newStatus !== 'DELETED') {
+            if (calcEnd && now > calcEnd) newStatus = 'ENDED';
+            else if (start && now >= start && (!calcEnd || now <= calcEnd)) newStatus = 'LIVE';
+          }
+          return { ...c, status: newStatus };
+        });
+
+        setContests(updatedList);
+        
+        // Featured = cuộc thi đang Mở đăng ký hoặc Đang diễn ra
+        const feat = updatedList.find(c => c.isPublished && (c.status === 'PUBLISHED' || c.status === 'LIVE'));
+        setFeatured(feat || updatedList[0] || null);
       })
       .catch(() => setContests([]))
       .finally(() => setLoading(false));

@@ -12,13 +12,20 @@ function formatDate(dt) {
   return new Date(dt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function CountdownBox({ targetDate }) {
+function CountdownBox({ targetDate, endDate }) {
   const [left, setLeft] = useState('');
   useEffect(() => {
     if (!targetDate) return;
     const tick = () => {
-      const diff = new Date(targetDate) - Date.now();
-      if (diff <= 0) { setLeft('Đã bắt đầu'); return; }
+      const now = Date.now();
+      if (endDate && now > new Date(endDate).getTime()) {
+        setLeft('Đã kết thúc');
+        return;
+      }
+      
+      const diff = new Date(targetDate) - now;
+      if (diff <= 0) { setLeft('Đang diễn ra'); return; }
+      
       const d = Math.floor(diff / 86400000);
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
@@ -28,7 +35,7 @@ function CountdownBox({ targetDate }) {
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [targetDate]);
+  }, [targetDate, endDate]);
   return <span>{left}</span>;
 }
 
@@ -95,6 +102,25 @@ export default function ContestDetailPage() {
     c.prizeThird  && { rank: '🥉 Giải Ba',   amount: c.prizeThird,  color: '#cd7c2f' },
   ].filter(Boolean);
 
+  // Tính toán kiểm tra thời gian
+  const now = new Date();
+  const startTime = contest.startTime ? new Date(contest.startTime) : null;
+  const isPast = (startTime && now > startTime) || contest.status === 'ENDED';
+
+  {isPast ? (
+    <span style={{ color: '#6b7280', background: '#f3f4f6' }}>Đã kết thúc</span>
+  ) : (
+    <span style={{ color: '#10b981', background: '#d1fae5' }}>Mở đăng ký</span>
+  )}
+
+  // 2. Chỗ nút bấm "Đăng ký"
+  <button 
+    disabled={isPast} 
+    style={{ background: isPast ? '#9ca3af' : '#10b981' }}
+  >
+    {isPast ? 'Đã đóng' : 'Đăng ký'}
+  </button>
+
   const canRegister = c.isPublished && c.status !== 'ENDED' && c.status !== 'DELETED';
   const isLive = c.status === 'LIVE';
 
@@ -114,6 +140,7 @@ export default function ContestDetailPage() {
         <span style={{ color: '#888', fontSize: 13, cursor: 'pointer' }} onClick={() => navigate('/contests')}>Cuộc thi</span>
         <span style={{ color: '#888', fontSize: 13 }}> › {c.title}</span>
       </div>
+      
 
       {/* Hero */}
       <div style={{ maxWidth: 1000, margin: '12px auto 0', padding: '0 24px' }}>
@@ -146,12 +173,12 @@ export default function ContestDetailPage() {
             {c.startTime && !isLive && (
               <>
                 <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, margin: '0 0 6px' }}>Còn lại:</p>
-                <p style={{ color: '#f59e0b', fontWeight: 800, fontSize: 14, margin: '0 0 16px' }}><CountdownBox targetDate={c.startTime} /></p>
+                <p style={{ color: '#f59e0b', fontWeight: 800, fontSize: 14, margin: '0 0 16px' }}><CountdownBox targetDate={c.startTime} endDate={c.endTime} /></p>
               </>
             )}
             <button onClick={handleRegister} disabled={!canRegister || registered || registering}
               style={{ width: '100%', padding: 12, background: registered ? '#10b981' : canRegister ? '#f59e0b' : 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 800, cursor: (!canRegister || registered) ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-              {registering ? '⏳ Đang xử lý...' : registered ? '✅ ĐÃ ĐĂNG KÝ' : canRegister ? 'ĐĂNG KÝ THAM GIA' : 'CHƯA MỞ ĐĂNG KÝ'}
+              {registering ? '⏳ Đang xử lý...' : registered ? '✅ ĐÃ ĐĂNG KÝ' : isPast ? '🔒 ĐÃ ĐÓNG ĐĂNG KÝ' : canRegister ? 'ĐĂNG KÝ THAM GIA' : 'CHƯA MỞ ĐĂNG KÝ'}
             </button>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: '10px 0 0' }}>
               👥 {c.registrantCount || 0} sinh viên đã đăng ký

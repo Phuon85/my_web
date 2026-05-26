@@ -3,7 +3,11 @@ package com.humg.olympic.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode; 
+import org.hibernate.type.SqlTypes;         
+
 import java.time.LocalDateTime;
+
 
 @Entity
 @Table(name = "team_member",
@@ -23,9 +27,11 @@ public class TeamMember {
     @JoinColumn(name = "user_id", nullable = false)
     private UserHumg user;
 
-    @Column(length = 50)
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "role")
     @Builder.Default
-    private String role = "MEMBER";  // CAPTAIN | MEMBER
+    private TeamRole role = TeamRole.MEMBER; 
 
     @Column(name = "join_note", length = 300)
     private String joinNote;

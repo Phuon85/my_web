@@ -5,6 +5,7 @@ import com.humg.olympic.entity.Team;
 import com.humg.olympic.entity.TeamMember;
 import com.humg.olympic.entity.UserHumg;
 import com.humg.olympic.repository.TeamMemberRepository;
+import com.humg.olympic.entity.TeamRole;
 import com.humg.olympic.repository.TeamRepository;
 import com.humg.olympic.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,7 @@ public class TeamService {
                 .mssv(u.getMssv())
                 .khoa(u.getKhoa())
                 .avatarUrl(u.getAvatarUrl())
-                .memberRole(m.getRole())
+                .memberRole(m.getRole().name())
                 .joinNote(m.getJoinNote())
                 .joinedAt(m.getJoinedAt())
                 .totalScore(u.getTotalScore())
@@ -152,11 +153,11 @@ public class TeamService {
             throw new RuntimeException("Người dùng đã là thành viên của đội tuyển này.");
 
         TeamMember member = TeamMember.builder()
-                .team(team)
-                .user(user)
-                .role(req.getRole() != null ? req.getRole() : "MEMBER")
-                .joinNote(req.getJoinNote())
-                .build();
+            .team(team)
+            .user(user)
+            .role(req.getRole() != null ? TeamRole.valueOf(req.getRole().toUpperCase()) : TeamRole.MEMBER)
+            .joinNote(req.getJoinNote())
+            .build();
 
         return toMemberResponse(memberRepo.save(member));
     }
@@ -174,7 +175,10 @@ public class TeamService {
     public TeamMemberResponse updateMemberRole(Long teamId, Long userId, String role) {
         TeamMember member = memberRepo.findByTeamIdAndUserId(teamId, userId)
                 .orElseThrow(() -> new RuntimeException("Thành viên không tồn tại."));
-        member.setRole(role);
+                
+        // Ép kiểu chuỗi truyền vào thành Enum
+        member.setRole(TeamRole.valueOf(role.toUpperCase())); 
+        
         return toMemberResponse(memberRepo.save(member));
     }
 }

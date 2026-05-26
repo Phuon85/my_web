@@ -104,6 +104,7 @@ export default function NewsDetailPage() {
   const canManage = ['TEACHER','MANAGER','ADMIN'].includes(user?.role);
 
   const load = useCallback(async () => {
+    if (!id || id === 'undefined') return;
     setLoading(true);
     try {
       const res = await newsAPI.getById(id);
@@ -118,7 +119,7 @@ export default function NewsDetailPage() {
       toast.error('Không tìm thấy bài tin này');
       navigate('/news');
     } finally { setLoading(false); }
-  }, [id]);
+  }, [id, navigate]);
 
   useEffect(()=>{ load(); },[load]);
 

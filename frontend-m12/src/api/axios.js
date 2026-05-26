@@ -85,15 +85,14 @@ export const roadmapAPI = {
   getById:  id           => api.get(`/roadmaps/${id}`),
   create:   data         => api.post('/roadmaps', data),
   update:   (id, data)   => api.put(`/roadmaps/${id}`, data),
-  delete: (id) => api.delete(`/roadmaps/${id}`),
-  deleteChapter: (chapterId) => api.delete(`/roadmaps/chapters/${chapterId}`),
-  removeFile: (fileId) => api.delete(`/roadmaps/files/${fileId}`),
+  delete:   id           => api.delete(`/roadmaps/${id}`),
   // Chapters
   addChapter:    (roadmapId, data) => api.post(`/roadmaps/${roadmapId}/chapters`, data),
   updateChapter: (chapterId, data) => api.put(`/roadmaps/chapters/${chapterId}`, data),
   deleteChapter: id                => api.delete(`/roadmaps/chapters/${id}`),
   // Files
   addFile:    (chapterId, data) => api.post(`/roadmaps/chapters/${chapterId}/files`, data),
+  removeFile: id                => api.delete(`/roadmaps/files/${id}`),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
@@ -160,4 +159,26 @@ export const teamAPI = {
   addMember:       (teamId, data)           => api.post(`/teams/${teamId}/members`, data),
   removeMember:    (teamId, userId)         => api.delete(`/teams/${teamId}/members/${userId}`),
   updateMemberRole:(teamId, userId, role)   => api.patch(`/teams/${teamId}/members/${userId}/role`, null, { params: { role } }),
+};
+// ── Exercise ──────────────────────────────────────────────────────────────────
+export const exerciseAPI = {
+  // Danh sách & chi tiết
+  getAll:         (params)          => api.get('/exercises', { params }),
+  getById:        (id)              => api.get(`/exercises/${id}`),
+  // Teacher+
+  create:         (data)            => api.post('/exercises', data),
+  update:         (id, data)        => api.put(`/exercises/${id}`, data),
+  delete:         (id)              => api.delete(`/exercises/${id}`),
+  publish:        (id)              => api.patch(`/exercises/${id}/publish`),
+  // Câu hỏi
+  addQuestion:    (exId, data)      => api.post(`/exercises/${exId}/questions`, data),
+  updateQuestion: (exId, qId, data) => api.put(`/exercises/${exId}/questions/${qId}`, data),
+  deleteQuestion: (exId, qId)       => api.delete(`/exercises/${exId}/questions/${qId}`),
+  reorderQuestions:(exId, ids)      => api.patch(`/exercises/${exId}/questions/reorder`, { ids }),
+  // Học sinh làm bài
+  start:          (id)              => api.post(`/exercises/${id}/start`),
+  submit:         (id, answers)     => api.post(`/exercises/${id}/submit`, { answers }),
+  myResult:       (id)              => api.get(`/exercises/${id}/my-result`),
+  // Kết quả (Teacher xem)
+  getResults:     (id, params)      => api.get(`/exercises/${id}/results`, { params }),
 };

@@ -119,6 +119,7 @@ public class ContestService {
     }
 
     // ── Đăng ký tham dự ───────────────────────────────────────────────────────
+    // ── Đăng ký tham dự ───────────────────────────────────────────────────────
     @Transactional
     public void register(Long contestId) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -128,6 +129,9 @@ public class ContestService {
 
         if (!contest.getIsPublished())
             throw new IllegalArgumentException("Cuộc thi chưa được công bố");
+        if (contest.getStartTime() != null && java.time.LocalDateTime.now().isAfter(contest.getStartTime())) {
+            throw new IllegalArgumentException("Đã quá hạn đăng ký!");
+        }
 
         if (participantRepository.existsByContestIdAndUserId(contestId, user.getId()))
             throw new IllegalArgumentException("Bạn đã đăng ký cuộc thi này rồi");
@@ -163,14 +167,41 @@ public class ContestService {
                         "Không tìm thấy cuộc thi id=" + id));
     }
 
+    // Trong ContestService.java
     ContestResponse toResponse(Contest c) {
+        String dynamicStatus = c.getStatus();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        // Logic tự động chuyển trạng thái theo thời gian thực
+        if (c.getStartTime() != null) {
+            java.time.LocalDateTime calcEndTime = c.getEndTime();
+            
+            // Nếu không có endTime trong DB, tự động tính: endTime = startTime + durationMinutes
+            if (calcEndTime == null && c.getDurationMinutes() != null) {
+                calcEndTime = c.getStartTime().plusMinutes(c.getDurationMinutes());
+            }
+
+            // Kiểm tra trạng thái
+            if (calcEndTime != null && now.isAfter(calcEndTime)) {
+                dynamicStatus = "ENDED"; // Đã thi xong
+            } else if (now.isAfter(c.getStartTime())) {
+                dynamicStatus = "LIVE";  // Đang trong giờ thi
+            }
+        }
+
+        // Không tự động đổi nếu Admin đang lưu nháp hoặc đã xóa
+        if ("DRAFT".equals(c.getStatus()) || "DELETED".equals(c.getStatus())) {
+            dynamicStatus = c.getStatus();
+        }
+
         long count = participantRepository.countByContestId(c.getId());
+        
         return ContestResponse.builder()
                 .id(c.getId())
                 .title(c.getTitle())
                 .description(c.getDescription())
                 .subject(c.getSubject())
-                .status(c.getStatus())
+                .status(dynamicStatus) // <-- Trả về trạng thái đã tính toán tự động
                 .startTime(c.getStartTime())
                 .endTime(c.getEndTime())
                 .durationMinutes(c.getDurationMinutes())
